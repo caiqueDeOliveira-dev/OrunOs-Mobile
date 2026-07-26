@@ -1,41 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
+import React from "react";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
 import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
-import { checkProviders, type ProviderInfo } from "../../src/services/providerService";
+import { getAllProviders } from "../../src/services/providerService";
 import { t } from "../../src/i18n";
 
 export default function ProvidersScreen() {
   const { colors } = useTheme();
   const { headerPadding } = useSafeArea();
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function loadProviders() {
-    try {
-      setError(null);
-      const data = await checkProviders();
-      setProviders(data);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
-
-  useEffect(() => {
-    loadProviders();
-  }, []);
-
-  function handleRefresh() {
-    setRefreshing(true);
-    loadProviders();
-  }
+  const providers = getAllProviders();
 
   const configuredCount = providers.filter((p) => p.configured).length;
 
@@ -43,7 +18,6 @@ export default function ProvidersScreen() {
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgBase }]}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />}
     >
       <View style={headerPadding}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t("providers.title")}</Text>
@@ -52,67 +26,62 @@ export default function ProvidersScreen() {
         </Text>
       </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
-      ) : error ? (
-        <View style={[styles.errorBox, { backgroundColor: colors.danger + "15", borderColor: colors.danger + "30" }]}>
-          <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
-          <Pressable onPress={loadProviders} accessibilityRole="button" accessibilityLabel={t("common.retry")}>
-            <Text style={[styles.retryText, { color: colors.accent }]}>{t("common.retry")}</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.list}>
-          {providers.map((provider) => (
-            <View
-              key={provider.id}
-              style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}
-            >
-              <View style={styles.cardHeader}>
-                <View style={styles.cardTitleRow}>
-                  <Ionicons
-                    name={provider.configured ? "checkmark-circle" : "ellipse-outline"}
-                    size={20}
-                    color={provider.configured ? "#22C55E" : colors.textMuted}
-                  />
-                  <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{provider.name}</Text>
-                </View>
-                <View
+      <View style={styles.list}>
+        {providers.map((provider) => (
+          <View
+            key={provider.id}
+            style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}
+          >
+            <View style={styles.cardHeader}>
+              <View style={styles.cardTitleRow}>
+                <Ionicons
+                  name={provider.configured ? "checkmark-circle" : "ellipse-outline"}
+                  size={20}
+                  color={provider.configured ? "#22C55E" : colors.textMuted}
+                />
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{provider.name}</Text>
+              </View>
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: provider.configured ? "#22C55E" + "20" : colors.surfaceHover,
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.badge,
-                    {
-                      backgroundColor: provider.configured ? "#22C55E" + "20" : colors.surfaceHover,
-                    },
+                    styles.badgeText,
+                    { color: provider.configured ? "#22C55E" : colors.textMuted },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.badgeText,
-                      { color: provider.configured ? "#22C55E" : colors.textMuted },
-                    ]}
-                  >
-                    {provider.configured ? t("providers.active") : t("providers.notConfigured")}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={[styles.envKey, { color: colors.textMuted }]}>
-                {t("providers.envKey")}: {provider.envKey}
-              </Text>
-
-              <View style={styles.modelsRow}>
-                <Text style={[styles.modelsLabel, { color: colors.textMuted }]}>{t("providers.models")}:</Text>
-                <Text style={[styles.modelsList, { color: colors.textSecondary }]}>
-                  {provider.models.slice(0, 3).join(", ")}
-                  {provider.models.length > 3 ? ` +${provider.models.length - 3}` : ""}
+                  {provider.configured ? t("providers.active") : t("providers.notConfigured")}
                 </Text>
               </View>
             </View>
-          ))}
-        </View>
-      )}
+
+            <Text style={[styles.envKey, { color: colors.textMuted }]}>
+              {t("providers.envKey")}: {provider.envKey}
+            </Text>
+
+            <View style={styles.modelsRow}>
+              <Text style={[styles.modelsLabel, { color: colors.textMuted }]}>{t("providers.models")}:</Text>
+              <Text style={[styles.modelsList, { color: colors.textSecondary }]}>
+                {provider.models.slice(0, 3).map((m) => m.name).join(", ")}
+                {provider.models.length > 3 ? ` +${provider.models.length - 3}` : ""}
+              </Text>
+            </View>
+
+            <View style={styles.freeModelsRow}>
+              {provider.models.filter((m) => m.free).map((m) => (
+                <View key={m.id} style={[styles.freeModelBadge, { backgroundColor: "#4CAF50" + "20" }]}>
+                  <Text style={[styles.freeModelText, { color: "#4CAF50" }]}>{m.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ))}
+      </View>
 
       <View style={[styles.helpBox, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
         <Ionicons name="information-circle-outline" size={20} color={colors.accent} />
@@ -120,6 +89,9 @@ export default function ProvidersScreen() {
           <Text style={[styles.helpTitle, { color: colors.textPrimary }]}>{t("providers.helpTitle")}</Text>
           <Text style={[styles.helpText, { color: colors.textMuted }]}>
             {t("providers.helpBody")}
+          </Text>
+          <Text style={[styles.helpText, { color: colors.textMuted }]}>
+            Use /provider no chat para trocar de provider e modelo.
           </Text>
         </View>
       </View>
@@ -196,6 +168,21 @@ const styles = StyleSheet.create({
   modelsList: {
     fontSize: TYPOGRAPHY.xs,
     flex: 1,
+  },
+  freeModelsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+  },
+  freeModelBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+  },
+  freeModelText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: FONT_WEIGHT.medium,
   },
   errorBox: {
     padding: SPACING.lg,

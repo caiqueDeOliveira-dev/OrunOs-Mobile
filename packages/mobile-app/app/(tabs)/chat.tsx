@@ -19,6 +19,7 @@ import { SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
 import { useChat } from "../../src/hooks";
 import { MessageBubble, ChatInput } from "../../src/components/chat";
 import { CameraCapture } from "../../src/components/camera/CameraCapture";
+import { ProviderPicker } from "../../src/components/ProviderPicker";
 import { EmptyState } from "../../src/components/ui";
 import { scheduleLocalNotification } from "../../src/services/notificationService";
 import { checkRateLimit, getRateLimitRemaining } from "../../src/services/rateLimiter";
@@ -35,22 +36,30 @@ export default function ChatScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
   const [typingAgent, setTypingAgent] = useState(false);
+  const [providerVisible, setProviderVisible] = useState(false);
+  const [currentProvider, setCurrentProvider] = useState("groq");
+  const [currentModel, setCurrentModel] = useState("llama-3.3-70b-versatile");
   const flatListRef = useRef<FlatList>(null);
+  const currentAgentId = agentId || "hampton";
 
   const { messages, sending, loading, error, isOnline, queuedCount, hasMore, send, loadMore: hookLoadMore } = useChat({
-    agentId: agentId || "hampton",
+    agentId: currentAgentId,
     conversationId: retryKey > 0 ? undefined : undefined,
   });
 
-  // Simulated typing indicator: after user sends, show "agent typing" based on message length
   const handleSend = useCallback(async (text: string) => {
     if (!checkRateLimit("chat-send")) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
+
+    if (text.trim() === "/provider") {
+      setProviderVisible(true);
+      return;
+    }
+
     setTypingAgent(true);
     await send(text);
-    // Hide typing indicator: longer messages get more time (simulates processing)
     const estimatedTime = Math.min(2000 + text.length * 10, 8000);
     setTimeout(() => setTypingAgent(false), estimatedTime);
   }, [send]);
@@ -150,8 +159,18 @@ export default function ChatScreen() {
           { backgroundColor: colors.bgBase, borderBottomColor: colors.surfaceBorder + "14" },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Hampton</Text>
-        <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>{t("chat.online")}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Hampton</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>{t("chat.online")}</Text>
+        </View>
+        <Pressable
+          onPress={() => setProviderVisible(true)}
+          style={[styles.providerButton, { backgroundColor: colors.accent + "15" }]}
+        >
+          <Text style={[styles.providerButtonText, { color: colors.accent }]}>
+            ⚡ {currentModel.split("/").pop()}
+          </Text>
+        </Pressable>
       </View>
 
       <FlatList
@@ -236,6 +255,16 @@ export default function ChatScreen() {
         onClose={() => setCameraVisible(false)}
         onCapture={handleCameraCapture}
       />
+
+      <ProviderPicker
+        visible={providerVisible}
+        onClose={() => setProviderVisible(false)}
+        agentId={currentAgentId}
+        onProviderChanged={(provider, model) => {
+          setCurrentProvider(provider);
+          setCurrentModel(model);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -248,8 +277,11 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
     paddingHorizontal: SPACING.xl,
     borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
+  headerLeft: { alignItems: "flex-start" },
   headerTitle: {
     fontSize: TYPOGRAPHY.lg,
     fontWeight: FONT_WEIGHT.bold,
@@ -257,6 +289,15 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: TYPOGRAPHY.sm,
     marginTop: 2,
+  },
+  providerButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 12,
+  },
+  providerButtonText: {
+    fontSize: TYPOGRAPHY.sm,
+    fontWeight: FONT_WEIGHT.medium,
   },
   messageList: {
     padding: SPACING.lg,
