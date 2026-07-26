@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { getUserId } from "../stores/authStore";
 
 export interface ChatMessage {
   id: string;
@@ -94,7 +95,7 @@ export async function sendVoiceMessage(
 ): Promise<{ conversationId: string; reply: string }> {
   const { data: conv, error: convError } = await supabase
     .from("conversations")
-    .insert({ title: content.slice(0, 60) })
+    .insert({ title: content.slice(0, 60), user_id: getUserId() })
     .select("id")
     .single();
 

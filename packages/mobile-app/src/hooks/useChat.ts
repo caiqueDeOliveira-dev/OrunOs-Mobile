@@ -6,6 +6,7 @@ import { loadMessages, loadMessagesBefore, sendMessage as apiSendMessage, subscr
 import { enqueueMessage, processQueue, getQueueCount, cacheConversation } from "../services/offlineQueue";
 import { trackChatSent } from "../services/analyticsService";
 import { t } from "../i18n";
+import { getUserId } from "../stores/authStore";
 
 const HAMPTON_AGENT_ID = "hampton";
 
@@ -15,6 +16,8 @@ async function getOrCreateConversation(agentId: string): Promise<string> {
   if (conversationCreationPromise) return conversationCreationPromise;
 
   conversationCreationPromise = (async () => {
+    const userId = getUserId();
+
     const { data: existing } = await supabase
       .from("conversations")
       .select("id")
@@ -27,7 +30,7 @@ async function getOrCreateConversation(agentId: string): Promise<string> {
 
     const { data: created, error: createErr } = await supabase
       .from("conversations")
-      .insert({ title: t("chat.newConversation"), agent_id: agentId })
+      .insert({ title: t("chat.newConversation"), agent_id: agentId, user_id: userId })
       .select("id")
       .single();
 

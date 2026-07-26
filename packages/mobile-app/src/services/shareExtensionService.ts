@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { supabase } from "./supabaseClient";
+import { getUserId } from "../stores/authStore";
 
 interface ShareData {
   text?: string;
@@ -36,6 +37,7 @@ export async function processSharedContent(data: ShareData): Promise<{
       .from("conversations")
       .insert({
         title: message.slice(0, 60),
+        user_id: getUserId(),
       })
       .select("id")
       .single();

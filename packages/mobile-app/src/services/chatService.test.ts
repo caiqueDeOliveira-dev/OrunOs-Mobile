@@ -17,6 +17,10 @@ vi.mock("./supabaseClient", () => ({
   },
 }));
 
+vi.mock("../stores/authStore", () => ({
+  getUserId: () => "test-user-1",
+}));
+
 const { loadMessages, sendMessage, sendVoiceMessage, subscribeToMessages } = await import("./chatService");
 
 describe("loadMessages", () => {

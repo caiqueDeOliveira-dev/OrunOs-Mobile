@@ -54,3 +54,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
 supabase.auth.onAuthStateChange((_event, session) => {
   useAuthStore.setState({ session, loading: false });
 });
+
+/**
+ * Returns the current user's ID, or null if not authenticated.
+ * Used by services that need to set user_id on new rows.
+ */
+export function getUserId(): string | null {
+  return useAuthStore.getState().session?.user?.id ?? null;
+}

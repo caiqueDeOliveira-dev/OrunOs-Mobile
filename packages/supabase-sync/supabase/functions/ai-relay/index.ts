@@ -36,6 +36,24 @@ import {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/**
+ * Extracts the user_id from the Authorization header JWT.
+ * The mobile app sends its Supabase Auth JWT — we decode the payload
+ * to get the `sub` claim (user ID) without needing to verify the JWT
+ * signature (Supabase's platform already verified it before our code runs).
+ */
+function extractUserId(req: Request): string | null {
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── STT (Speech-to-Text) via Groq Whisper (GRÁTIS) ─────────────
 
 async function transcribeAudio(audioBase64: string, mimeType: string): Promise<string> {
@@ -198,6 +216,7 @@ Deno.serve(async (req: Request) => {
 
   const userMessageId = crypto.randomUUID();
   const now = new Date().toISOString();
+  const userId = extractUserId(req);
 
   const { error: insertUserError } = await supabase.from("messages").insert({
     id: userMessageId,
@@ -206,6 +225,7 @@ Deno.serve(async (req: Request) => {
     role: "user",
     agent_id: agentId,
     content,
+    user_id: userId,
     created_at: now,
     updated_at: now,
   });
@@ -235,6 +255,7 @@ Deno.serve(async (req: Request) => {
     provider: agent!.default_provider,
     model: agent!.default_model,
     content: replyContent,
+    user_id: userId,
     created_at: replyNow,
     updated_at: replyNow,
   });

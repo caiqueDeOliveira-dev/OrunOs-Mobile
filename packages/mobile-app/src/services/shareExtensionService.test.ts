@@ -18,6 +18,10 @@ vi.mock("expo-haptics", () => ({
   NotificationFeedbackType: { Success: "success" },
 }));
 
+vi.mock("../stores/authStore", () => ({
+  getUserId: () => "test-user-1",
+}));
+
 const { processSharedContent } = await import("./shareExtensionService");
 
 describe("shareExtensionService", () => {
