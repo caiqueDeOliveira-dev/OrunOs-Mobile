@@ -17,7 +17,7 @@ vi.mock("./supabaseClient", () => ({
   },
 }));
 
-const { loadMessages, sendMessage, subscribeToMessages } = await import("./chatService");
+const { loadMessages, sendMessage, sendVoiceMessage, subscribeToMessages } = await import("./chatService");
 
 describe("loadMessages", () => {
   beforeEach(() => fromMock.mockReset());
@@ -111,5 +111,48 @@ describe("subscribeToMessages", () => {
     capturedCallback({ new: newMessage });
 
     expect(onInsert).toHaveBeenCalledWith(newMessage);
+  });
+});
+
+describe("sendVoiceMessage", () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+    invokeMock.mockReset();
+  });
+
+  it("creates a conversation, sends via ai-relay, and returns reply", async () => {
+    fromMock.mockReturnValue(
+      fakeQueryResult({ data: { id: "conv-voice-1" }, error: null })
+    );
+    invokeMock.mockResolvedValue({
+      data: { content: "Olá! Como posso ajudar?" },
+      error: null,
+    });
+
+    const result = await sendVoiceMessage("hampton", "Olá Hampton");
+
+    expect(fromMock).toHaveBeenCalledWith("conversations");
+    expect(invokeMock).toHaveBeenCalledWith("ai-relay", {
+      body: { conversationId: "conv-voice-1", agentId: "hampton", content: "Olá Hampton" },
+    });
+    expect(result.conversationId).toBe("conv-voice-1");
+    expect(result.reply).toBe("Olá! Como posso ajudar?");
+  });
+
+  it("throws when conversation creation fails", async () => {
+    fromMock.mockReturnValue(
+      fakeQueryResult({ data: null, error: { message: "table missing" } })
+    );
+
+    await expect(sendVoiceMessage("hampton", "oi")).rejects.toThrow(/table missing/);
+  });
+
+  it("throws when ai-relay call fails", async () => {
+    fromMock.mockReturnValue(
+      fakeQueryResult({ data: { id: "conv-1" }, error: null })
+    );
+    invokeMock.mockResolvedValue({ data: null, error: { message: "timeout" } });
+
+    await expect(sendVoiceMessage("hampton", "oi")).rejects.toThrow(/timeout/);
   });
 });

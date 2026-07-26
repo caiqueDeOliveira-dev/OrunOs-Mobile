@@ -12,6 +12,7 @@ export function fakeQueryResult(result: { data: any; error: any }) {
     select: vi.fn(() => chain),
     eq: vi.fn(() => chain),
     is: vi.fn(() => chain),
+    not: vi.fn(() => chain),
     order: vi.fn(() => chain),
     limit: vi.fn(() => chain),
     update: vi.fn(() => chain),

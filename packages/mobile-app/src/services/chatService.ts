@@ -83,6 +83,28 @@ export async function sendMessage(
 }
 
 /**
+ * Sends a voice message: creates a new conversation, stores the user's
+ * transcribed text, calls the AI provider via ai-relay, and returns the
+ * reply content. This is what makes the Voice screen work with the PC
+ * turned off.
+ */
+export async function sendVoiceMessage(
+  agentId: string,
+  content: string
+): Promise<{ conversationId: string; reply: string }> {
+  const { data: conv, error: convError } = await supabase
+    .from("conversations")
+    .insert({ title: content.slice(0, 60) })
+    .select("id")
+    .single();
+
+  if (convError) throw new Error(`Failed to create conversation: ${convError.message}`);
+
+  const result = await sendMessage(conv.id, agentId, content);
+  return { conversationId: conv.id, reply: result.content };
+}
+
+/**
  * Subscribes to new messages in a conversation via Supabase Realtime, so
  * the screen updates live if a message arrives from elsewhere (e.g. the
  * desktop app, once it's back online and synced up). Returns an unsubscribe

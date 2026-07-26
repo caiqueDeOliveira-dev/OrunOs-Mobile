@@ -13,6 +13,7 @@ import {
   speak,
   stopSpeaking,
 } from "../../src/services/voiceService";
+import { sendVoiceMessage } from "../../src/services/chatService";
 
 type VoiceState = "idle" | "recording" | "processing" | "transcribing" | "speaking" | "error";
 
@@ -108,14 +109,18 @@ export default function VoiceScreen() {
         setTranscript(result.text);
         setState("processing");
 
-        // Simulate sending to agent and getting response
-        // In production: send transcript to ai-relay and get agent reply
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-        const agentReply = t("voice.simulatedReply", { text: result.text });
-        setTtsText(agentReply);
-        setState("speaking");
-        await speak(agentReply, { language: "pt-BR" });
-        setState("idle");
+        try {
+          const { reply } = await sendVoiceMessage("hampton", result.text);
+          if (!mountedRef.current) return;
+          setTtsText(reply);
+          setState("speaking");
+          await speak(reply, { language: "pt-BR" });
+          setState("idle");
+        } catch {
+          if (!mountedRef.current) return;
+          setErrorMessage(t("voice.error"));
+          setState("error");
+        }
       } else {
         setErrorMessage(t("voice.transcriptionFailed"));
         setState("error");
