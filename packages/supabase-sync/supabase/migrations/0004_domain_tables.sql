@@ -168,7 +168,6 @@ create table if not exists memories (
   key text not null,
   content text not null,
   tags jsonb,
-  embedding vector(1536),      -- OpenAI ada-002 dimensions (for future RAG)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
