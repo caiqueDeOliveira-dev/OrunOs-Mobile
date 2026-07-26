@@ -32,6 +32,7 @@ import {
   PROVIDER_ENV_KEY,
   type ChatTurn,
 } from "./logic.ts";
+import { runAutonomousLoop, type LoopResult } from "./autonomousLoop.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -235,21 +236,59 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // 4) Call the actual provider.
-  let replyContent: string;
+  // 4) Run the autonomous tool-calling loop.
+  const history = buildHistory(agent!.persona_prompt, recentMessages ?? [], content);
+  const apiKey = Deno.env.get(PROVIDER_ENV_KEY[agent!.default_provider!]);
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: `${PROVIDER_ENV_KEY[agent!.default_provider!]} not configured` }),
+      { status: 500 },
+    );
+  }
+
+  // Convert history to the format expected by the autonomous loop
+  const loopMessages = history
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+  let loopResult: LoopResult;
   try {
-    replyContent = await callProvider(agent!.default_provider!, agent!.default_model!, history);
+    loopResult = await runAutonomousLoop(
+      agent!.default_provider!,
+      agent!.default_model!,
+      agent!.persona_prompt ?? "Voce e um assistente util.",
+      loopMessages,
+      { userId: userId ?? "", agentId, conversationId, supabase },
+      apiKey,
+    );
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }), { status: 502 });
   }
 
-  // 5) Store the assistant's reply as its own message, seq+1.
+  const replyContent = loopResult.finalContent;
+
+  // 5) Store tool call messages in the DB for traceability
+  let nextSeq = userSeq + 1;
+  for (const tc of loopResult.toolCallsMade) {
+    nextSeq++;
+    // Store tool call as a system message
+    await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      seq: nextSeq,
+      role: "system",
+      agent_id: agentId,
+      content: `[Tool: ${tc.name}] Args: ${JSON.stringify(tc.args)} → ${tc.result.success ? "OK" : "ERROR: " + tc.result.error}`,
+      user_id: userId,
+    });
+  }
+
+  // 6) Store the assistant's final reply
   const replyId = crypto.randomUUID();
   const replyNow = new Date().toISOString();
   const { error: insertReplyError } = await supabase.from("messages").insert({
     id: replyId,
     conversation_id: conversationId,
-    seq: userSeq + 1,
+    seq: nextSeq + 1,
     role: "assistant",
     agent_id: agentId,
     provider: agent!.default_provider,
@@ -272,6 +311,8 @@ Deno.serve(async (req: Request) => {
       content: replyContent,
       provider: agent!.default_provider,
       model: agent!.default_model,
+      toolCalls: loopResult.toolCallsMade.length,
+      iterations: loopResult.iterations,
     }),
     { status: 200, headers: { "content-type": "application/json" } }
   );

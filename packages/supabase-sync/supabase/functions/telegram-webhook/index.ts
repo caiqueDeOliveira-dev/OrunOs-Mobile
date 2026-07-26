@@ -1,0 +1,162 @@
+// Orun OS — Telegram Bot Webhook Handler
+//
+// Receives incoming Telegram messages via Bot API webhook,
+// routes them to the appropriate agent, and sends replies back.
+//
+// Deploy: supabase functions deploy telegram-webhook
+// Env vars needed: TELEGRAM_BOT_TOKEN
+
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import { runAutonomousLoop } from "../ai-relay/autonomousLoop.ts";
+import { PROVIDER_ENV_KEY } from "../ai-relay/logic.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+
+interface TelegramUpdate {
+  update_id: number;
+  message?: {
+    message_id: number;
+    from: { id: number; first_name: string };
+    chat: { id: number };
+    text?: string;
+  };
+}
+
+/**
+ * Sends a message back via Telegram Bot API.
+ */
+async function sendTelegramMessage(chatId: number, text: string): Promise<void> {
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.log(`[Telegram] No token configured — would send to ${chatId}: ${text.slice(0, 100)}`);
+    return;
+  }
+
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: "Markdown",
+    }),
+  });
+}
+
+/**
+ * Routes a Telegram message to the correct agent based on keyword rules.
+ */
+async function routeMessage(supabase: any, telegramUserId: number, text: string): Promise<{ agentId: string; userId: string } | null> {
+  const { data: rules } = await supabase
+    .from("whatsapp_keyword_rules")
+    .select("agent, user_id, keywords")
+    .eq("enabled", true)
+    .is("deleted_at", null);
+
+  if (!rules || rules.length === 0) return null;
+
+  for (const rule of rules) {
+    const keywords = (rule.keywords as string[]) ?? [];
+    if (keywords.some((kw) => text.toLowerCase().includes(kw.toLowerCase()))) {
+      return { agentId: rule.agent, userId: rule.user_id };
+    }
+  }
+
+  return null;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+
+  const update: TelegramUpdate = await req.json();
+  const msg = update.message;
+  if (!msg?.text) return new Response("OK", { status: 200 });
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // Route to agent
+  const route = await routeMessage(supabase, msg.from.id, msg.text);
+  if (!route) {
+    await sendTelegramMessage(msg.chat.id, "Desculpe, nao consegui processar sua mensagem. Configure regras de palavras-chave no app.");
+    return new Response("OK", { status: 200 });
+  }
+
+  // Create conversation
+  const { data: conv } = await supabase
+    .from("conversations")
+    .insert({ title: `Telegram: ${msg.text.slice(0, 50)}`, user_id: route.userId })
+    .select("id")
+    .single();
+
+  if (!conv) {
+    await sendTelegramMessage(msg.chat.id, "Erro ao criar conversa.");
+    return new Response("OK", { status: 200 });
+  }
+
+  // Get agent info
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("id, name, default_provider, default_model, persona_prompt")
+    .eq("id", route.agentId)
+    .maybeSingle();
+
+  if (!agent) {
+    await sendTelegramMessage(msg.chat.id, "Agente nao encontrado.");
+    return new Response("OK", { status: 200 });
+  }
+
+  // Get API key for the agent's provider
+  const providerKey = PROVIDER_ENV_KEY[agent.default_provider!];
+  const apiKey = providerKey ? Deno.env.get(providerKey) : null;
+
+  // Store user message
+  const now = new Date().toISOString();
+  await supabase.from("messages").insert({
+    conversation_id: conv.id,
+    seq: 1,
+    role: "user",
+    agent_id: route.agentId,
+    content: msg.text,
+    user_id: route.userId,
+    created_at: now,
+    updated_at: now,
+  });
+
+  if (!apiKey || !agent.default_provider || !agent.default_model) {
+    await sendTelegramMessage(msg.chat.id, `[${agent.name}] Provider nao configurado.`);
+    return new Response("OK", { status: 200 });
+  }
+
+  // Run autonomous loop
+  try {
+    const result = await runAutonomousLoop(
+      agent.default_provider,
+      agent.default_model,
+      agent.persona_prompt ?? "Voce e um assistente util.",
+      [{ role: "user", content: msg.text }],
+      { userId: route.userId, agentId: route.agentId, conversationId: conv.id, supabase },
+      apiKey,
+    );
+
+    const replyNow = new Date().toISOString();
+    await supabase.from("messages").insert({
+      conversation_id: conv.id,
+      seq: 2,
+      role: "assistant",
+      agent_id: route.agentId,
+      provider: agent.default_provider,
+      model: agent.default_model,
+      content: result.finalContent,
+      user_id: route.userId,
+      created_at: replyNow,
+      updated_at: replyNow,
+    });
+
+    await sendTelegramMessage(msg.chat.id, result.finalContent);
+  } catch (err) {
+    await sendTelegramMessage(msg.chat.id, `[${agent.name}] Erro: ${(err as Error).message}`);
+  }
+
+  return new Response("OK", { status: 200 });
+});

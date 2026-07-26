@@ -59,6 +59,8 @@ export interface SendMessageResult {
   content: string;
   provider: string;
   model: string;
+  toolCalls?: number;
+  iterations?: number;
 }
 
 /**

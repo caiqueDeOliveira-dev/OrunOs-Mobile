@@ -10,6 +10,18 @@ import { getUserId } from "../stores/authStore";
 
 const HAMPTON_AGENT_ID = "hampton";
 
+/**
+ * Filters out tool call trace messages from the display.
+ * The autonomous loop stores tool calls as system messages — these are
+ * internal traces that the user doesn't need to see.
+ */
+function filterDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
+  return messages.filter((m) => {
+    if (m.role === "system" && m.content?.startsWith("[Tool:")) return false;
+    return true;
+  });
+}
+
 let conversationCreationPromise: Promise<string> | null = null;
 
 async function getOrCreateConversation(agentId: string): Promise<string> {
@@ -106,7 +118,7 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
         if (mountedRef.current) setConversationId(id);
         const msgs = await loadMessages(id);
         if (mountedRef.current) {
-          setMessages(msgs);
+          setMessages(filterDisplayMessages(msgs));
           setHasMore(msgs.length >= 30);
         }
       } catch (err) {
@@ -120,6 +132,8 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
     if (!conversationId) return;
     const unsubscribe = subscribeToMessages(conversationId, (message) => {
       if (mountedRef.current) {
+        // Filter out tool call traces from display
+        if (message.role === "system" && message.content?.startsWith("[Tool:")) return;
         setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
       }
     });
@@ -185,10 +199,11 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
     try {
       const olderMessages = await loadMessagesBefore(conversationId, oldestSeq);
       if (mountedRef.current) {
-        if (olderMessages.length === 0) {
+        const filtered = filterDisplayMessages(olderMessages);
+        if (filtered.length === 0) {
           setHasMore(false);
         } else {
-          setMessages((prev) => [...olderMessages, ...prev]);
+          setMessages((prev) => [...filtered, ...prev]);
           setHasMore(olderMessages.length >= 30);
         }
       }
