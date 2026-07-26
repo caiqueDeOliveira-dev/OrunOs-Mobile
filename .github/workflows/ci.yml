@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# One `npm ci` at the repo root installs and links both workspace packages
+# (npm workspaces). Each script below (`typecheck`, `lint`, `test`, `build`)
+# fans out to every package that defines it, via `--workspaces --if-present`
+# in the root package.json — a package without a given script (e.g.
+# supabase-sync has no `lint`/`build` script) is silently skipped for that
+# step rather than failing the job.
+#
+# This does NOT run Supabase migrations against a real project — the sync
+# package's tests only validate engine logic against an in-memory SQLite db
+# and a fake Supabase client (see packages/supabase-sync/src/test/helpers.ts).
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run typecheck:edge-logic
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build

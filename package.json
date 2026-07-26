@@ -1,0 +1,26 @@
+{
+  "name": "orun-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Orun OS — monorepo for shared packages (design system, Supabase sync engine). The main Electron app is expected to join as a third workspace member (e.g. packages/app) when it's folded in here.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "overrides": {
+    "react-native": "0.81.5",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "scheduler": "0.26.0"
+  },
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck:edge-logic": "npm run typecheck:edge-logic --workspace=@orun/supabase-sync",
+    "lint": "npm run lint --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.1": true,
+    "esbuild@0.21.5": true
+  }
+}

@@ -1,0 +1,28 @@
+# Dependencies (each workspace has its own node_modules under npm workspaces)
+node_modules/
+
+# Build output
+dist/
+build/
+web-build/
+
+# Expo (packages/mobile-app)
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Env files — never commit real secrets. .env.example files ARE meant to be committed.
+.env
+.env.local
+.env.*.local
+
+# OS/editor cruft
+.DS_Store
+*.log
+npm-debug.log*
+
+# Vitest/coverage
+coverage/

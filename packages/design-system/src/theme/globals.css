@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-surface-border/10;
+  }
+  html,
+  body,
+  #root {
+    @apply h-full bg-bg-base text-text-primary;
+  }
+  body {
+    @apply font-sans antialiased;
+  }
+  ::selection {
+    @apply bg-accent/30 text-text-primary;
+  }
+  /* Thin, unobtrusive scrollbars for the desktop shell */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-active rounded-full;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

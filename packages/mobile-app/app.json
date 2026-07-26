@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Orun OS",
+    "slug": "orun-os",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#080607",
+    "scheme": "orun-os",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#080607"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.orun.os",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Use Face ID para acessar o Orun OS rapidamente.",
+        "NSCameraUsageDescription": "Câmera para enviar fotos aos agentes.",
+        "NSMicrophoneUsageDescription": "Microfone para entrada de voz.",
+        "NSSpeechRecognitionUsageDescription": "Reconhecimento de fala para conversas por voz."
+      }
+    },
+    "android": {
+      "package": "com.orun.os",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#080607"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-av",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permitir Face ID para acessar o Orun OS."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir câmera para enviar fotos aos agentes."
+        }
+      ],
+      "expo-background-fetch"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
