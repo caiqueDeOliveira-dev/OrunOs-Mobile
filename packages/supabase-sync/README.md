@@ -32,7 +32,7 @@ ler nem escrever nada, porque não existe policy liberando acesso.
 
 ## Passo a passo
 
-> **Nota:** este pacote agora vive dentro de `orun-monorepo/packages/supabase-sync`
+> **Nota:** este pacote agora vive dentro de `OrunOs-Mobile/packages/supabase-sync`
 > (veja o README na raiz do monorepo). O passo 3 abaixo já reflete que
 > `better-sqlite3` está listado como devDependency aqui (pros testes deste
 > pacote rodarem sozinhos) — seu app Electron continua precisando da própria

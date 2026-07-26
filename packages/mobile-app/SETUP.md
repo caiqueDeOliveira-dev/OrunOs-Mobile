@@ -55,8 +55,8 @@ npm install -g supabase
 
 ### 2.1 Clonar o repositório
 ```bash
-git clone https://github.com/seu-usuario/orun-monorepo.git
-cd orun-monorepo
+git clone https://github.com/CaiqueDeOliveira-Dev/OrunOs-Mobile.git
+cd OrunOs-Mobile
 ```
 
 ### 2.2 Instalar dependências do mobile

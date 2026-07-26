@@ -1,8 +1,8 @@
 {
-  "name": "orun-monorepo",
+  "name": "orun-os-mobile",
   "private": true,
   "version": "0.1.0",
-  "description": "Orun OS — monorepo for shared packages (design system, Supabase sync engine). The main Electron app is expected to join as a third workspace member (e.g. packages/app) when it's folded in here.",
+  "description": "Orun OS Mobile — Expo/React Native app, design system and Supabase sync engine.",
   "workspaces": [
     "packages/*"
   ],

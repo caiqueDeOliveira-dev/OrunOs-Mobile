@@ -13,14 +13,14 @@ todos necessários pra chegar no "app mobile funcionando sem o PC ligado".
 - [ ] **1. Ter um projeto Supabase criado** (você já tem, segundo nossa conversa)
 - [ ] **2. Instalar dependências do monorepo inteiro**
   ```bash
-  cd orun-monorepo
+  cd OrunOs-Mobile
   npm install
   ```
 - [ ] **3. Validar que tudo builda antes de mexer em produção**
   ```bash
   npm run typecheck && npm run test && npm run lint && npm run build
   ```
-  Deve terminar limpo: 116 testes passando, 0 erros de lint (8 avisos esperados).
+  Deve terminar limpo: 136 testes passando, 0 erros de lint (8 avisos esperados).
 
 ## Banco de dados (packages/supabase-sync)
 

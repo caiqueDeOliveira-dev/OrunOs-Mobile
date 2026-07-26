@@ -148,7 +148,7 @@ chamado corretamente.
 `.github/workflows/ci.yml` roda `typecheck` + `lint` + `test` + `build` a
 cada push/PR que toque nesta pasta. Assume que o pacote vive em
 `orun-design-system/` na raiz do repo — se você dobrar isso pra dentro do
-monorepo principal do Orun OS em outro caminho, ajusta o `working-directory`
+monorepo do Orun OS Mobile em outro caminho, ajusta o `working-directory`
 e os filtros `paths` no topo do arquivo. Não está ligado ao pipeline de
 build de instaladores (Windows/macOS/Linux) que já existe no projeto
 principal — são workflows separados de propósito.
@@ -244,7 +244,7 @@ E troca o `onRetryFailed` mockado no `Developer.tsx`/`Settings.tsx` por
 
 ## Como plugar no projeto Electron existente
 
-> **Nota:** este pacote agora vive dentro de `orun-monorepo/packages/design-system`
+> **Nota:** este pacote agora vive dentro de `OrunOs-Mobile/packages/design-system`
 > (veja o README na raiz do monorepo). Se o seu app Electron entrar como um
 > terceiro workspace ali, o passo 2 abaixo vira `"@orun/design-system": "workspace:*"`
 > em vez de `file:`. Se preferir manter os dois repositórios separados por

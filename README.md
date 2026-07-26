@@ -1,17 +1,17 @@
-# Orun OS — Monorepo
+# Orun OS Mobile
 
 **Novo aqui ou voltando depois de um tempo? Comece por
 [`GETTING_STARTED.md`](./GETTING_STARTED.md)** — checklist único, na ordem
 certa, juntando os 3 READMEs num só caminho do zero até o app mobile
 funcionando sem o PC ligado.
 
-Workspace npm reunindo os pacotes compartilhados do Orun OS. Testado do zero
+Workspace npm reunindo os pacotes compartilhados do Orun OS Mobile. Testado do zero
 (`npm ci` limpo + typecheck + lint + test + build) antes de entregar.
 
 ## Estrutura
 
 ```
-orun-monorepo/
+orun-os-mobile/
 ├── package.json          # workspaces: ["packages/*"]
 ├── .github/workflows/ci.yml
 └── packages/
@@ -26,8 +26,7 @@ o PC desligado — a chamada de IA acontece na Edge Function `ai-relay`
 (dentro de `supabase-sync`), não na sua máquina. Detalhes de segurança e
 arquitetura em `packages/mobile-app/README.md`.
 
-Quando o app Electron principal (o `orun-os` de verdade, com Baileys, n8n,
-node-cron etc.) entrar aqui, ele vira um quarto workspace —
+Quando o app Electron principal entrar aqui, ele vira um quarto workspace —
 `packages/app` (ou o nome que fizer sentido) — e passa a importar os outros
 como `"@orun/design-system": "workspace:*"` em vez de `file:../...`.
 
@@ -38,7 +37,7 @@ npm install       # uma instalação só, na raiz — resolve os três workspace
 npm run typecheck # tsc --noEmit nos três
 npm run typecheck:edge-logic # tsc --noEmit só na lógica pura da Edge Function (Deno não entra no typecheck normal)
 npm run lint      # eslint (só design-system tem lint configurado)
-npm run test      # vitest + jest — 116 testes no total (46 design-system + 22 mobile-app + 48 supabase-sync)
+npm run test      # vitest — 136 testes no total (46 design-system + 42 mobile-app + 48 supabase-sync)
 npm run build     # vite build (só design-system tem build de artefato; mobile-app builda via `expo build`/EAS, fora deste comando)
 ```
 
@@ -78,7 +77,7 @@ quem consome o pacote de verdade — o app Electron — deve trazer sua própria
 versão). Isso importa porque `better-sqlite3` é um módulo nativo compilado:
 a versão que o app Electron usa em produção precisa ser recompilada contra o
 Node/Electron ABI certo (via `electron-rebuild` ou similar) — a versão
-instalada aqui no monorepo é só pra rodar os testes em Node puro, não é a
+instalada aqui no repo é só pra rodar os testes em Node puro, não é a
 mesma binária que vai rodar dentro do Electron empacotado.
 
 ## Cada pacote tem seu próprio README
