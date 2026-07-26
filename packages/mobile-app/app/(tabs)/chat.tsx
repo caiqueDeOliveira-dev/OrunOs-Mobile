@@ -39,6 +39,7 @@ export default function ChatScreen() {
   const [providerVisible, setProviderVisible] = useState(false);
   const [currentProvider, setCurrentProvider] = useState("groq");
   const [currentModel, setCurrentModel] = useState("llama-3.3-70b-versatile");
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const currentAgentId = agentId || "hampton";
 
@@ -46,6 +47,13 @@ export default function ChatScreen() {
     agentId: currentAgentId,
     conversationId: retryKey > 0 ? undefined : undefined,
   });
+
+  const visibleError = error && error !== dismissedError ? error : null;
+
+  // Reset dismissed error when a new error appears
+  useEffect(() => {
+    if (error) setDismissedError(null);
+  }, [error]);
 
   const handleSend = useCallback(async (text: string) => {
     if (!checkRateLimit("chat-send")) {
@@ -58,6 +66,7 @@ export default function ChatScreen() {
       return;
     }
 
+    setDismissedError(null);
     setTypingAgent(true);
     await send(text);
     const estimatedTime = Math.min(2000 + text.length * 10, 8000);
@@ -237,10 +246,16 @@ export default function ChatScreen() {
         }
       />
 
-      {error && (
-        <Text style={[styles.errorBanner, { color: colors.warning, backgroundColor: colors.bgOverlay }]}>
-          {t("chat.error.send", { error })}
-        </Text>
+      {visibleError && (
+        <View style={[styles.errorBanner, { backgroundColor: colors.danger + "15", borderColor: colors.danger + "30" }]}>
+          <Text style={[styles.errorText, { color: colors.danger }]}>{visibleError}</Text>
+          <Pressable
+            onPress={() => setDismissedError(error)}
+            style={[styles.errorDismiss, { backgroundColor: colors.danger + "20" }]}
+          >
+            <Text style={[styles.errorDismissText, { color: colors.danger }]}>✕</Text>
+          </Pressable>
+        </View>
       )}
 
       <ChatInput
@@ -337,9 +352,30 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.medium,
   },
   errorBanner: {
-    fontSize: TYPOGRAPHY.xs,
-    textAlign: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
+    borderWidth: 1,
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.sm,
+    borderRadius: 8,
+  },
+  errorText: {
+    fontSize: TYPOGRAPHY.xs,
+    flex: 1,
+    marginRight: SPACING.sm,
+  },
+  errorDismiss: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorDismissText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: FONT_WEIGHT.bold,
   },
 });

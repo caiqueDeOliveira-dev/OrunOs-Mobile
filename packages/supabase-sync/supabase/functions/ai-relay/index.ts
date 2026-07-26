@@ -237,7 +237,6 @@ Deno.serve(async (req: Request) => {
   }
 
   // 4) Run the autonomous tool-calling loop.
-  const history = buildHistory(agent!.persona_prompt, recentMessages ?? [], content);
   const apiKey = Deno.env.get(PROVIDER_ENV_KEY[agent!.default_provider!]);
   if (!apiKey) {
     return new Response(

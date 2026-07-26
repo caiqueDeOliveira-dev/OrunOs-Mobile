@@ -111,6 +111,20 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
     return unsub;
   }, []);
 
+  // Check Supabase connectivity on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { error } = await supabase.from("conversations").select("id").limit(1);
+        if (error && mountedRef.current) {
+          console.warn("[useChat] Supabase connectivity check failed:", error.message);
+        }
+      } catch {
+        // Ignore connectivity check errors
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -171,11 +185,20 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
         await apiSendMessage(conversationId, agentId, content);
         trackChatSent(agentId, "cloud");
       } catch (err) {
+        const errMsg = (err as Error).message || "Erro desconhecido";
+        const isRelayError = errMsg.includes("ai-relay") || errMsg.includes("Failed to fetch") || errMsg.includes("404");
+        const isNetworkError = errMsg.includes("Network") || errMsg.includes("timeout") || errMsg.includes("abort");
         await enqueueMessage(conversationId, agentId, content);
         const count = await getQueueCount();
         if (mountedRef.current) {
           setQueuedCount(count);
-          setError(t("chat.queuedForLater"));
+          if (isRelayError) {
+            setError(`Servidor AI offline. Deploy ai-relay no Supabase. (${errMsg})`);
+          } else if (isNetworkError) {
+            setError(`Sem conexao com o servidor. Verifique sua internet. (${errMsg})`);
+          } else {
+            setError(`${t("chat.queuedForLater")} (${errMsg})`);
+          }
         }
       } finally {
         if (mountedRef.current) {
