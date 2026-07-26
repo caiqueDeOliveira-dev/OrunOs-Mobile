@@ -33,6 +33,7 @@ async function getOrCreateConversation(agentId: string): Promise<string> {
     const { data: existing } = await supabase
       .from("conversations")
       .select("id")
+      .eq("agent_id", agentId)
       .is("deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(1)

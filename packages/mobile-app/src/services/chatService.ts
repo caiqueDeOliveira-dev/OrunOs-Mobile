@@ -113,9 +113,20 @@ export async function sendVoiceMessage(
  * desktop app, once it's back online and synced up). Returns an unsubscribe
  * function.
  */
+const activeMessageChannels = new Map<string, ReturnType<typeof supabase.channel>>();
+
 export function subscribeToMessages(conversationId: string, onInsert: (message: ChatMessage) => void) {
+  const topic = `messages:${conversationId}`;
+
+  // Remove any existing channel for this conversation first
+  const existing = activeMessageChannels.get(topic);
+  if (existing) {
+    supabase.removeChannel(existing);
+    activeMessageChannels.delete(topic);
+  }
+
   const channel = supabase
-    .channel(`messages:${conversationId}`)
+    .channel(topic)
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
@@ -123,7 +134,10 @@ export function subscribeToMessages(conversationId: string, onInsert: (message: 
     )
     .subscribe();
 
+  activeMessageChannels.set(topic, channel);
+
   return () => {
     supabase.removeChannel(channel);
+    activeMessageChannels.delete(topic);
   };
 }
