@@ -68,9 +68,11 @@ export default function ChatScreen() {
 
     setDismissedError(null);
     setTypingAgent(true);
-    await send(text);
-    const estimatedTime = Math.min(2000 + text.length * 10, 8000);
-    setTimeout(() => setTypingAgent(false), estimatedTime);
+    try {
+      await send(text);
+    } finally {
+      setTypingAgent(false);
+    }
   }, [send]);
 
   function handleCameraCapture(uri: string) {

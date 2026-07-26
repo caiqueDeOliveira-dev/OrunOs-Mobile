@@ -76,13 +76,21 @@ export async function sendMessage(
   agentId: string,
   content: string
 ): Promise<SendMessageResult> {
-  const { data, error } = await supabase.functions.invoke("ai-relay", {
-    body: { conversationId, agentId, content },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
-  if (error) throw new Error(`ai-relay call failed: ${error.message}`);
-  if (data?.error) throw new Error(data.error);
-  return data as SendMessageResult;
+  try {
+    const { data, error } = await supabase.functions.invoke("ai-relay", {
+      body: { conversationId, agentId, content },
+      signal: controller.signal,
+    });
+
+    if (error) throw new Error(`ai-relay call failed: ${error.message}`);
+    if (data?.error) throw new Error(data.error);
+    return data as SendMessageResult;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**

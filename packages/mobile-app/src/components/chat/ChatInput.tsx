@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { View, TextInput, Pressable, Text, StyleSheet, Keyboard } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../theme/ThemeProvider";
 import { RADIUS, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../theme/tokens";
 import { t } from "../../i18n";
@@ -22,6 +23,7 @@ export function ChatInput({
   disabled = false,
 }: ChatInputProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
 
@@ -40,6 +42,7 @@ export function ChatInput({
         {
           backgroundColor: colors.bgBase,
           borderTopColor: colors.surfaceBorder + "14",
+          paddingBottom: insets.bottom || SPACING.sm,
         },
       ]}
     >
