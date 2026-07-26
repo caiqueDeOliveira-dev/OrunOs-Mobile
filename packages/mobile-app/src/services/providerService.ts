@@ -49,21 +49,17 @@ const PROVIDERS: Omit<ProviderInfo, "configured">[] = [
 
 /**
  * Checks which providers have their API key configured on the server.
- * Uses a lightweight ai-relay call with a minimal prompt to test connectivity.
- * In production, you'd have a dedicated health endpoint — for now we
- * check by querying the agents table for which providers are in use.
+ * Marks all cloud-reachable providers as available — the actual API key
+ * validation happens server-side in the Edge Function. If the key isn't
+ * set, the ai-relay returns an error, which the user sees as a chat error.
  */
 export async function checkProviders(): Promise<ProviderInfo[]> {
-  const { data: agents } = await supabase
-    .from("agents")
-    .select("default_provider")
-    .not("default_provider", "is", null);
-
-  const usedProviders = new Set(agents?.map((a) => a.default_provider) ?? []);
-
+  // All non-Ollama providers are cloud-reachable and can be configured.
+  // The user sets secrets via `supabase secrets set` — we don't need to
+  // verify from the client side.
   return PROVIDERS.map((p) => ({
     ...p,
-    configured: usedProviders.has(p.id),
+    configured: true,
   }));
 }
 
