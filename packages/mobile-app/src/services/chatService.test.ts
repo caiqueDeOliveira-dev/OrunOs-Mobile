@@ -52,6 +52,7 @@ describe("sendMessage", () => {
 
     expect(invokeMock).toHaveBeenCalledWith("ai-relay", {
       body: { conversationId: "c1", agentId: "hampton", content: "oi" },
+      signal: expect.any(AbortSignal),
     });
     expect(result).toEqual(relayResult);
   });
@@ -138,6 +139,7 @@ describe("sendVoiceMessage", () => {
     expect(fromMock).toHaveBeenCalledWith("conversations");
     expect(invokeMock).toHaveBeenCalledWith("ai-relay", {
       body: { conversationId: "conv-voice-1", agentId: "hampton", content: "Olá Hampton" },
+      signal: expect.any(AbortSignal),
     });
     expect(result.conversationId).toBe("conv-voice-1");
     expect(result.reply).toBe("Olá! Como posso ajudar?");

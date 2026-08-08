@@ -1,0 +1,23 @@
+{
+  "name": "@orun/whatsapp-baileys",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "WhatsApp Baileys gateway for Orun OS — routes messages to agents by group or keyword",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node --experimental-strip-types --env-file=.env src/index.ts",
+    "dev": "node --experimental-strip-types --env-file=.env --watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.16",
+    "@supabase/supabase-js": "^2.45.0",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.4"
+  }
+}

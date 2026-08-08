@@ -188,6 +188,7 @@ export default function ChatScreen() {
         ref={flatListRef}
         data={displayedMessages}
         keyExtractor={(m) => m.id}
+        style={styles.flatList}
         contentContainerStyle={styles.messageList}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
@@ -288,6 +289,7 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  flatList: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: { marginTop: SPACING.sm, fontSize: TYPOGRAPHY.sm },
   header: {

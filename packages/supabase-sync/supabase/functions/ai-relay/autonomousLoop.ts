@@ -31,6 +31,9 @@ export interface LoopResult {
 
 const MAX_ITERATIONS = 10;
 
+/** Max time (ms) allowed per single provider API call before aborting. */
+const PROVIDER_TIMEOUT_MS = 30_000;
+
 /**
  * Runs the autonomous tool-calling loop.
  *
@@ -217,6 +220,7 @@ async function callClaudeWithTools(
       messages: claudeMessages,
       tools: claudeTools.length > 0 ? claudeTools : undefined,
     }),
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
   });
 
   if (!res.ok) throw new Error(`Claude API error ${res.status}: ${await res.text()}`);
@@ -285,6 +289,7 @@ async function callOpenAICompatibleWithTools(
       authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
   });
 
   if (!res.ok) throw new Error(`${provider} API error ${res.status}: ${await res.text()}`);

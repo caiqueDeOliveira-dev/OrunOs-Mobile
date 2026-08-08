@@ -22,15 +22,16 @@ function filterDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
   });
 }
 
-let conversationCreationPromise: Promise<string> | null = null;
+const conversationCreationPromises = new Map<string, Promise<string>>();
 
 async function getOrCreateConversation(agentId: string): Promise<string> {
-  if (conversationCreationPromise) return conversationCreationPromise;
+  const existing = conversationCreationPromises.get(agentId);
+  if (existing) return existing;
 
-  conversationCreationPromise = (async () => {
+  const promise = (async () => {
     const userId = getUserId();
 
-    const { data: existing } = await supabase
+    const { data: existingConv } = await supabase
       .from("conversations")
       .select("id")
       .eq("agent_id", agentId)
@@ -39,7 +40,7 @@ async function getOrCreateConversation(agentId: string): Promise<string> {
       .limit(1)
       .maybeSingle();
 
-    if (existing?.id) return existing.id;
+    if (existingConv?.id) return existingConv.id;
 
     const { data: created, error: createErr } = await supabase
       .from("conversations")
@@ -51,9 +52,13 @@ async function getOrCreateConversation(agentId: string): Promise<string> {
     return created.id;
   })();
 
-  const result = await conversationCreationPromise;
-  conversationCreationPromise = null;
-  return result;
+  conversationCreationPromises.set(agentId, promise);
+
+  try {
+    return await promise;
+  } finally {
+    conversationCreationPromises.delete(agentId);
+  }
 }
 
 interface UseChatOptions {
@@ -84,6 +89,7 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
   const [queuedCount, setQueuedCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const mountedRef = useRef(true);
+  const sendingRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
 
   messagesRef.current = messages;
@@ -157,7 +163,8 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
 
   const send = useCallback(
     async (content: string) => {
-      if (!content.trim() || !conversationId || sending) return;
+      if (!content.trim() || !conversationId || sendingRef.current) return;
+      sendingRef.current = true;
       setSending(true);
       setError(null);
 
@@ -178,16 +185,50 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
         await enqueueMessage(conversationId, agentId, content);
         const count = await getQueueCount();
         if (mountedRef.current) setQueuedCount(count);
+        sendingRef.current = false;
         setSending(false);
         return;
       }
 
       try {
-        await apiSendMessage(conversationId, agentId, content);
+        const result = await apiSendMessage(conversationId, agentId, content);
         trackChatSent(agentId, "cloud");
+
+        if (mountedRef.current && result) {
+          setMessages((prev) => {
+            const withoutOptimistic = prev.filter((m) => m.id !== optimisticMsg.id);
+
+            const userMsg: ChatMessage = {
+              id: result.userMessageId,
+              conversation_id: conversationId,
+              seq: -1,
+              role: "user",
+              agent_id: agentId,
+              content: content.trim(),
+              provider: null,
+              model: null,
+              created_at: optimisticMsg.created_at,
+            };
+
+            const assistantMsg: ChatMessage = {
+              id: result.replyId,
+              conversation_id: conversationId,
+              seq: 0,
+              role: "assistant",
+              agent_id: agentId,
+              content: result.content,
+              provider: result.provider,
+              model: result.model,
+              created_at: new Date().toISOString(),
+            };
+
+            return [...withoutOptimistic, userMsg, assistantMsg];
+          });
+        }
       } catch (err) {
         const errMsg = (err as Error).message || "Erro desconhecido";
         const isRelayError = errMsg.includes("ai-relay") || errMsg.includes("Failed to fetch") || errMsg.includes("404");
+        const isProviderError = errMsg.includes("422") || errMsg.includes("provider") || errMsg.includes("not configured");
         const isNetworkError = errMsg.includes("Network") || errMsg.includes("timeout") || errMsg.includes("abort");
         await enqueueMessage(conversationId, agentId, content);
         const count = await getQueueCount();
@@ -195,6 +236,8 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
           setQueuedCount(count);
           if (isRelayError) {
             setError(`Servidor AI offline. Deploy ai-relay no Supabase. (${errMsg})`);
+          } else if (isProviderError) {
+            setError(`Provider de IA nao configurado. Configure o agente no Supabase. (${errMsg})`);
           } else if (isNetworkError) {
             setError(`Sem conexao com o servidor. Verifique sua internet. (${errMsg})`);
           } else {
@@ -204,11 +247,12 @@ export function useChat({ conversationId: forcedId, agentId = HAMPTON_AGENT_ID }
       } finally {
         if (mountedRef.current) {
           cacheConversation(conversationId!, t("chat.conversationLabel"), agentId, messagesRef.current);
+          sendingRef.current = false;
           setSending(false);
         }
       }
     },
-    [conversationId, agentId, sending, isOnline]
+    [conversationId, agentId, isOnline]
   );
 
   const loadMore = useCallback(async () => {

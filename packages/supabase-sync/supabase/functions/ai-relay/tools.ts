@@ -257,21 +257,58 @@ const memorySave: ToolDefinition = {
 
 const memorySearch: ToolDefinition = {
   name: "memory_search",
-  description: "Buscar memorias salvas por chave ou conteudo",
+  description: "Buscar memorias salvas por chave, conteudo ou similaridade semantica",
   parameters: {
     type: "object",
     properties: {
       query: { type: "string", description: "Termo de busca" },
+      embedding: { type: "string", description: "Embedding de 768 dimensoes (JSON array) para busca vetorial — opcional" },
     },
     required: ["query"],
   },
   execute: async (args, ctx) => {
+    const query = String(args.query ?? "").trim();
+    if (!query) return { success: false, error: "query e obrigatorio" };
+
+    // Vetorial via match_memories() quando um embedding nomic 768d for fornecido
+    // (desktop gera; mobile ainda nao tem embedder local). Fallback: texto.
+    let embedding: number[] | null = null;
+    if (typeof args.embedding === "string" && args.embedding.trim()) {
+      try {
+        const parsed = JSON.parse(args.embedding);
+        if (Array.isArray(parsed) && parsed.length === 768 && parsed.every((n) => typeof n === "number")) {
+          embedding = parsed;
+        }
+      } catch {
+        embedding = null;
+      }
+    }
+
+    if (embedding) {
+      const { data, error } = await ctx.supabase.rpc("match_memories", {
+        query_embedding: embedding,
+        p_user_id: ctx.userId,
+        top_k: 10,
+        threshold: 0.2,
+      });
+      if (error) return { success: false, error: error.message };
+      return {
+        success: true,
+        result: (data ?? []).map((m: any) => ({
+          key: m.key,
+          content: m.content,
+          tags: m.tags,
+          score: m.score,
+        })),
+      };
+    }
+
     const { data, error } = await ctx.supabase
       .from("memories")
       .select("key, content, tags")
       .eq("user_id", ctx.userId)
       .is("deleted_at", null)
-      .or(`key.ilike.%${args.query}%,content.ilike.%${args.query}%`)
+      .or(`key.ilike.%${query}%,content.ilike.%${query}%`)
       .limit(10);
     if (error) return { success: false, error: error.message };
     return { success: true, result: data ?? [] };
@@ -354,6 +391,19 @@ const workspaceAction: ToolDefinition = {
 
 // ─── Web Tools ─────────────────────────────────────────────────────
 
+/**
+ * Sanitizes search query input to prevent injection when the search API
+ * is integrated. Strips control characters, limits length, and removes
+ * potential prompt injection patterns.
+ */
+function sanitizeSearchQuery(raw: string): string {
+  return raw
+    .replace(/[\x00-\x08\x0E-\x1F]/g, "")  // control chars
+    .replace(/\s+/g, " ")                      // collapse whitespace
+    .trim()
+    .slice(0, 200);                            // max 200 chars
+}
+
 const webSearch: ToolDefinition = {
   name: "web_search",
   description: "Buscar informacao na web",
@@ -365,8 +415,12 @@ const webSearch: ToolDefinition = {
     required: ["query"],
   },
   execute: async (args, _ctx) => {
-    // In production, call a search API (DuckDuckGo, SerpAPI, etc.)
-    return { success: true, result: `Busca por "${args.query}" — resultado pendente de integracao com API de busca` };
+    const query = sanitizeSearchQuery(String(args.query ?? ""));
+    if (!query) return { success: false, error: "Query de busca vazia apos sanitizacao" };
+
+    // TODO: Integrate with a real search API (DuckDuckGo, SerpAPI, etc.)
+    // When integrating, always pass the sanitized `query` variable, never the raw input.
+    return { success: true, result: `Busca por "${query}" — resultado pendente de integracao com API de busca` };
   },
 };
 

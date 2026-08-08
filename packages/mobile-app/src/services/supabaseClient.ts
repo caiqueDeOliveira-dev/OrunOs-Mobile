@@ -2,8 +2,8 @@ import "react-native-url-polyfill/auto";
 import { createClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://kmfmeewibravdsxemzuj.supabase.co";
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZm1lZXdpYnJhdmRzeGVtenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MzI1NTAsImV4cCI6MjEwMDUwODU1MH0.P_orzcmg1qjx_XctSR8pIvTSV-OP6XDS1f0h7xTUrkU";
 
 const TIMEOUT_MS = 60_000;
 

@@ -15,6 +15,10 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kmfmeewibravdsxemzuj.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttZm1lZXdpYnJhdmRzeGVtenVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MzI1NTAsImV4cCI6MjEwMDUwODU1MH0.P_orzcmg1qjx_XctSR8pIvTSV-OP6XDS1f0h7xTUrkU"
+      },
       "ios": {
         "simulator": false
       },
@@ -32,15 +36,6 @@
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
-      },
-      "android": {
-        "serviceAccountKeyPath": "./google-service-account.json"
-      }
-    }
+    "production": {}
   }
 }

@@ -19,6 +19,14 @@ web-build/
 .env.local
 .env.*.local
 
+# WhatsApp Baileys gateway — runtime session credentials (QR-linked device)
+# NEVER commit auth_state: it contains the live WhatsApp session keys.
+packages/whatsapp-baileys/auth_state/
+
+# Editor/backup cruft
+*.bak
+*.tmp
+
 # OS/editor cruft
 .DS_Store
 *.log

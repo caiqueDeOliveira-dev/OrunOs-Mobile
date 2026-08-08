@@ -37,6 +37,9 @@ import { runAutonomousLoop, type LoopResult } from "./autonomousLoop.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+/** Max request body size in bytes (256KB). Prevents abuse via huge payloads. */
+const MAX_BODY_BYTES = 256 * 1024;
+
 /**
  * Extracts the user_id from the Authorization header JWT.
  * The mobile app sends its Supabase Auth JWT — we decode the payload
@@ -144,6 +147,14 @@ async function callProvider(provider: string, model: string, history: ChatTurn[]
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+  }
+
+  // Reject oversized requests before parsing to prevent memory abuse
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_BODY_BYTES) {
+    return new Response(JSON.stringify({ error: `Request too large (max ${MAX_BODY_BYTES / 1024}KB)` }), {
+      status: 413,
+    });
   }
 
   const body = await req.json();

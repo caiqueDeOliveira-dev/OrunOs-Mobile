@@ -4,7 +4,12 @@
 // routes them to the appropriate agent, and sends replies back.
 //
 // Deploy: supabase functions deploy telegram-webhook
-// Env vars needed: TELEGRAM_BOT_TOKEN
+// Env vars needed: TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET
+//
+// Security: Every request is validated against TELEGRAM_WEBHOOK_SECRET.
+// When registering the webhook with Telegram, set secret_token to the
+// same value. Telegram will include it as X-Telegram-Bot-Api-Secret-Token
+// on every incoming request, so we can reject forged payloads.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { runAutonomousLoop } from "../ai-relay/autonomousLoop.ts";
@@ -13,6 +18,7 @@ import { PROVIDER_ENV_KEY } from "../ai-relay/logic.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+const TELEGRAM_WEBHOOK_SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
 
 interface TelegramUpdate {
   update_id: number;
@@ -22,6 +28,35 @@ interface TelegramUpdate {
     chat: { id: number };
     text?: string;
   };
+}
+
+/**
+ * Validates that the request came from Telegram by checking the
+ * X-Telegram-Bot-Api-Secret-Token header against our configured secret.
+ *
+ * How it works:
+ * 1. When you register a webhook with Telegram (setWebhook), you provide a secret_token
+ * 2. Telegram stores that token and includes it as a header on every POST to your webhook
+ * 3. We compare the header value with our local TELEGRAM_WEBHOOK_SECRET
+ * 4. If they don't match, the request is forged and we reject it
+ *
+ * If TELEGRAM_WEBHOOK_SECRET is not configured, validation is skipped
+ * (development mode) with a warning log.
+ */
+function validateTelegramSecret(req: Request): boolean {
+  if (!TELEGRAM_WEBHOOK_SECRET) {
+    console.warn("[Telegram] TELEGRAM_WEBHOOK_SECRET not set — skipping validation (dev mode)");
+    return true;
+  }
+  const token = req.headers.get("x-telegram-bot-api-secret-token");
+  if (!token) return false;
+  // Timing-safe comparison to prevent timing attacks
+  if (token.length !== TELEGRAM_WEBHOOK_SECRET.length) return false;
+  let diff = 0;
+  for (let i = 0; i < token.length; i++) {
+    diff |= token.charCodeAt(i) ^ TELEGRAM_WEBHOOK_SECRET.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 /**
@@ -68,6 +103,12 @@ async function routeMessage(supabase: any, telegramUserId: number, text: string)
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+
+  // Validate webhook secret — reject forged requests
+  if (!validateTelegramSecret(req)) {
+    console.warn("[Telegram] Rejected request with invalid/missing secret token");
+    return new Response("Forbidden", { status: 403 });
+  }
 
   const update: TelegramUpdate = await req.json();
   const msg = update.message;

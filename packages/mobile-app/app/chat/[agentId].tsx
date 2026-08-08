@@ -101,6 +101,7 @@ export default function AgentChatScreen() {
         ref={flatListRef}
         data={displayedMessages}
         keyExtractor={(m) => m.id}
+        style={styles.flatList}
         contentContainerStyle={styles.messageList}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
@@ -144,6 +145,7 @@ export default function AgentChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  flatList: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     paddingBottom: SPACING.md,
