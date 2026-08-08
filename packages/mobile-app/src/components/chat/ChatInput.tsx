@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { View, TextInput, Pressable, Text, StyleSheet, Keyboard } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../theme/ThemeProvider";
-import { RADIUS, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../theme/tokens";
+import { NEON, RADIUS, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../theme/tokens";
 import { t } from "../../i18n";
 
 interface ChatInputProps {
@@ -40,9 +40,14 @@ export function ChatInput({
       style={[
         styles.container,
         {
-          backgroundColor: colors.bgBase,
-          borderTopColor: colors.surfaceBorder + "14",
+          backgroundColor: "rgba(10,4,20,0.7)",
+          borderTopColor: NEON.glow.red + "40",
           paddingBottom: insets.bottom || SPACING.sm,
+          shadowColor: NEON.glow.red,
+          shadowOpacity: 0.15,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: -2 },
+          elevation: 10,
         },
       ]}
     >
@@ -50,8 +55,8 @@ export function ChatInput({
         style={[
           styles.inputRow,
           {
-            backgroundColor: colors.bgSunken,
-            borderColor: colors.surfaceBorder + "14",
+            backgroundColor: "rgba(15,7,24,0.6)",
+            borderColor: NEON.glow.red + "40",
           },
         ]}
       >

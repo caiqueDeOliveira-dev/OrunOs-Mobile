@@ -4,9 +4,9 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
 import { loadRecentConversations, type ConversationSummary } from "../../src/services/memoryService";
-import { EmptyState, Loader } from "../../src/components/ui";
+import { EmptyState, Loader, NeonBackground } from "../../src/components/ui";
 import { t } from "../../src/i18n";
 import { timeAgo } from "../../src/utils";
 
@@ -40,15 +40,26 @@ export default function MemoryScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bgBase }]}>
-        <Loader />
-      </View>
+      <NeonBackground>
+        <View style={[styles.center, {}]}>
+          <Loader />
+        </View>
+      </NeonBackground>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgBase }]}>
-      <View style={[styles.header, headerPadding]}>
+    <NeonBackground style={styles.container}>
+      <View
+        style={[
+          styles.header,
+          headerPadding,
+          {
+            backgroundColor: "rgba(10,4,20,0.55)",
+            borderBottomColor: NEON.glow.red + "40",
+          },
+        ]}
+      >
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t("memory.title")}</Text>
       </View>
 
@@ -57,7 +68,7 @@ export default function MemoryScreen() {
         keyExtractor={(c) => c.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentGlow} />
         }
         ListHeaderComponent={
           loadError && conversations.length > 0 ? (
@@ -86,8 +97,8 @@ export default function MemoryScreen() {
             style={[
               styles.card,
               {
-                backgroundColor: colors.surface,
-                borderColor: colors.surfaceBorder + "14",
+                backgroundColor: "rgba(15,7,24,0.55)",
+                borderColor: NEON.glow.red + "30",
               },
             ]}
             onPress={() => {
@@ -106,7 +117,7 @@ export default function MemoryScreen() {
           </Pressable>
         )}
       />
-    </View>
+    </NeonBackground>
   );
 }
 
@@ -116,6 +127,7 @@ const styles = StyleSheet.create({
   header: {
     paddingBottom: SPACING.lg,
     paddingHorizontal: SPACING.xl,
+    borderBottomWidth: 1,
   },
   title: {
     fontSize: TYPOGRAPHY.xxl,

@@ -4,10 +4,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
 import { t } from "../../src/i18n";
 import { supabase } from "../../src/services/supabaseClient";
 import { getUserId } from "../../src/stores/authStore";
+import { NeonBackground } from "../../src/components/ui";
 
 interface WorkspaceInfo {
   titleKey: string;
@@ -104,7 +105,7 @@ function HealthDashboard() {
   useEffect(() => { load(); }, [load]);
 
   const stat = (label: string, value: string, color: string) => (
-    <View style={[s.statCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+    <View style={[s.statCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
       <Text style={[s.statVal, { color }]}>{value}</Text>
       <Text style={[s.statLbl, { color: colors.textMuted }]}>{label}</Text>
     </View>
@@ -120,7 +121,7 @@ function HealthDashboard() {
         {stat("Queimado", `${data?.burned ?? 0}`, "#9C27B0")}
       </View>
       {data?.metrics?.length > 0 && (
-        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.cardTitle, { color: colors.textSecondary }]}>Metricas</Text>
           {data.metrics.map((m: string, i: number) => (
             <Text key={i} style={[s.cardText, { color: colors.textPrimary }]}>{m}</Text>
@@ -128,7 +129,7 @@ function HealthDashboard() {
         </View>
       )}
       {(!data || (data.calories === 0 && data.workoutMin === 0)) && (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Peca ao Hampton para registrar refeicoes ou treinos</Text>
         </View>
       )}
@@ -164,7 +165,7 @@ function FinanceDashboard() {
   useEffect(() => { load(); }, [load]);
 
   const stat = (label: string, value: string, color: string) => (
-    <View style={[s.statCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+    <View style={[s.statCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
       <Text style={[s.statVal, { color }]}>{value}</Text>
       <Text style={[s.statLbl, { color: colors.textMuted }]}>{label}</Text>
     </View>
@@ -179,10 +180,10 @@ function FinanceDashboard() {
         {stat("Saldo", `R$ ${data?.balance?.toFixed(2) ?? "0,00"}`, data?.balance >= 0 ? "#4CAF50" : "#F44336")}
       </View>
       {data?.entries?.length > 0 && (
-        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.cardTitle, { color: colors.textSecondary }]}>Transacoes</Text>
           {data.entries.map((e: any, i: number) => (
-            <View key={i} style={[s.txRow, i < data.entries.length - 1 && { borderBottomColor: colors.surfaceBorder + "14", borderBottomWidth: 1 }]}>
+            <View key={i} style={[s.txRow, i < data.entries.length - 1 && { borderBottomColor: NEON.glow.red + "30", borderBottomWidth: 1 }]}>
               <Text style={[s.txDesc, { color: colors.textPrimary }]}>{e.description}</Text>
               <Text style={[s.txAmount, { color: e.type === "income" ? "#4CAF50" : "#F44336" }]}>
                 {e.type === "income" ? "+" : "-"} R$ {e.amount.toFixed(2)}
@@ -192,7 +193,7 @@ function FinanceDashboard() {
         </View>
       )}
       {(!data || data.entries.length === 0) && (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Peca ao Hampton para registrar transacoes</Text>
         </View>
       )}
@@ -225,14 +226,14 @@ function MarketingDashboard() {
       <Text style={[s.section, { color: colors.textSecondary }]}>CAMPANHAS</Text>
       {data?.entries?.length > 0 ? (
         data.entries.map((e: any, i: number) => (
-          <View key={i} style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View key={i} style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{e.campaign_name ?? "Campanha"}</Text>
             <Text style={[s.cardText, { color: colors.textSecondary }]}>{e.objective ?? ""}</Text>
             <Text style={[s.cardStatus, { color: e.status === "published" ? "#4CAF50" : colors.warning }]}>{e.status}</Text>
           </View>
         ))
       ) : (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Peca ao Marketing para criar campanhas</Text>
         </View>
       )}
@@ -272,7 +273,7 @@ function DeveloperDashboard() {
       <Text style={[s.section, { color: colors.textSecondary }]}>ANALISES DE CODIGO</Text>
       {data?.entries?.length > 0 ? (
         data.entries.map((e: any, i: number) => (
-          <View key={i} style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View key={i} style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{e.repo ?? e.file_path ?? "Analise"}</Text>
               {e.severity && <Text style={[s.cardStatus, { color: sevColor(e.severity) }]}>{e.severity}</Text>}
@@ -284,7 +285,7 @@ function DeveloperDashboard() {
           </View>
         ))
       ) : (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Peca ao Developer para analisar codigo</Text>
         </View>
       )}
@@ -317,7 +318,7 @@ function DesignerDashboard() {
       <Text style={[s.section, { color: colors.textSecondary }]}>IMAGENS GERADAS</Text>
       {data?.entries?.length > 0 ? (
         data.entries.map((e: any, i: number) => (
-          <View key={i} style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View key={i} style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{e.engine} / {e.model_used ?? "—"}</Text>
             <Text style={[s.cardText, { color: colors.textSecondary }]} numberOfLines={2}>{e.prompt}</Text>
             {e.output_url && (
@@ -326,7 +327,7 @@ function DesignerDashboard() {
           </View>
         ))
       ) : (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Peca ao Designer para gerar imagens</Text>
         </View>
       )}
@@ -365,7 +366,7 @@ function CreatorDashboard() {
       <Text style={[s.section, { color: colors.textSecondary }]}>PROJETOS DE VIDEO</Text>
       {data?.entries?.length > 0 ? (
         data.entries.map((e: any, i: number) => (
-          <View key={i} style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View key={i} style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{e.title}</Text>
               <Text style={[s.cardStatus, { color: statusColor(e.status) }]}>{e.status}</Text>
@@ -376,7 +377,7 @@ function CreatorDashboard() {
           </View>
         ))
       ) : (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Peca ao Creator para criar videos</Text>
         </View>
       )}
@@ -415,7 +416,7 @@ function TeacherDashboard() {
       <Text style={[s.section, { color: colors.textSecondary }]}>PROGRESSO</Text>
       {data?.entries?.length > 0 ? (
         data.entries.map((e: any, i: number) => (
-          <View key={i} style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View key={i} style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{e.subject}</Text>
               {e.status && <Text style={[s.cardStatus, { color: statusColor(e.status) }]}>{e.status}</Text>}
@@ -425,7 +426,7 @@ function TeacherDashboard() {
           </View>
         ))
       ) : (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Peca ao Teacher para criar quizzes</Text>
         </View>
       )}
@@ -461,7 +462,7 @@ function AutomationDashboard() {
       <Text style={[s.section, { color: colors.textSecondary }]}>AUTOMACOES</Text>
       {data?.automations?.length > 0 ? (
         data.automations.map((a: any, i: number) => (
-          <View key={i} style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View key={i} style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{a.name ?? "Automacao"}</Text>
               <Text style={[s.cardStatus, { color: a.enabled ? "#4CAF50" : colors.textMuted }]}>{a.enabled ? "Ativa" : "Inativa"}</Text>
@@ -469,7 +470,7 @@ function AutomationDashboard() {
           </View>
         ))
       ) : (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Nenhuma automacao configurada</Text>
         </View>
       )}
@@ -477,13 +478,13 @@ function AutomationDashboard() {
       <Text style={[s.section, { color: colors.textSecondary }]}>JOBS AGENDADOS</Text>
       {data?.jobs?.length > 0 ? (
         data.jobs.map((j: any, i: number) => (
-          <View key={i} style={[s.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View key={i} style={[s.card, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{j.name}</Text>
             <Text style={[s.cardText, { color: colors.textSecondary }]}>{j.agent_id} — {j.cron_expression}</Text>
           </View>
         ))
       ) : (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+        <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[s.emptyText, { color: colors.textSecondary }]}>Nenhum job agendado</Text>
         </View>
       )}
@@ -519,57 +520,66 @@ export default function WorkspaceScreen() {
   const hasDashboard = ["health", "finance", "marketing", "developer", "designer", "creator", "teacher", "automation"].includes(workspaceId || "");
 
   return (
-    <ScrollView
-      style={[s.container, { backgroundColor: colors.bgBase }]}
-      contentContainerStyle={s.content}
-      refreshControl={hasDashboard ? <RefreshControl refreshing={refreshing} onRefresh={() => setRefreshing(false)} tintColor={colors.accent} /> : undefined}
-    >
-      <View style={[s.header, headerPadding]}>
-        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
-          <Text style={[s.closeButton, { color: colors.textMuted }]}>✕ {t("workspace.close")}</Text>
-        </Pressable>
-      </View>
+    <NeonBackground style={s.container}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.content}
+        refreshControl={hasDashboard ? <RefreshControl refreshing={refreshing} onRefresh={() => setRefreshing(false)} tintColor={colors.accentGlow} /> : undefined}
+      >
+        <View
+          style={[
+            s.header,
+            headerPadding,
+            { backgroundColor: "rgba(10,4,20,0.55)", borderBottomColor: NEON.glow.red + "40" },
+          ]}
+        >
+          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
+            <Text style={[s.closeButton, { color: colors.textMuted }]}>✕ {t("workspace.close")}</Text>
+          </Pressable>
+        </View>
 
-      {info ? (
-        <View>
-          <View style={s.titleRow}>
-            <Text style={s.titleIcon}>{info.icon}</Text>
-            <View>
-              <Text style={[s.title, { color: colors.textPrimary }]}>{t(info.titleKey)}</Text>
-              <Text style={[s.description, { color: colors.textSecondary }]}>{t(info.descriptionKey)}</Text>
+        {info ? (
+          <View>
+            <View style={s.titleRow}>
+              <Text style={s.titleIcon}>{info.icon}</Text>
+              <View>
+                <Text style={[s.title, { color: colors.textPrimary }]}>{t(info.titleKey)}</Text>
+                <Text style={[s.description, { color: colors.textSecondary }]}>{t(info.descriptionKey)}</Text>
+              </View>
             </View>
+
+            {renderDashboard()}
+
+            {info.featureKeys.length > 0 && (
+              <View style={[s.featuresCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+                <Text style={[s.featuresTitle, { color: colors.textSecondary }]}>{t("workspace.features")}</Text>
+                {info.featureKeys.map((key, i) => (
+                  <View key={i} style={[s.featureRow, i < info.featureKeys.length - 1 && { borderBottomColor: NEON.glow.red + "30", borderBottomWidth: 1 }]}>
+                    <Text style={[s.featureText, { color: colors.textPrimary }]}>{t(key)}</Text>
+                    <Text style={[s.featureStatus, { color: hasDashboard ? "#4CAF50" : colors.warning }]}>
+                      {hasDashboard ? "Ativo" : t("workspace.comingSoon")}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
-
-          {renderDashboard()}
-
-          {info.featureKeys.length > 0 && (
-            <View style={[s.featuresCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
-              <Text style={[s.featuresTitle, { color: colors.textSecondary }]}>{t("workspace.features")}</Text>
-              {info.featureKeys.map((key, i) => (
-                <View key={i} style={[s.featureRow, i < info.featureKeys.length - 1 && { borderBottomColor: colors.surfaceBorder + "14", borderBottomWidth: 1 }]}>
-                  <Text style={[s.featureText, { color: colors.textPrimary }]}>{t(key)}</Text>
-                  <Text style={[s.featureStatus, { color: hasDashboard ? "#4CAF50" : colors.warning }]}>
-                    {hasDashboard ? "Ativo" : t("workspace.comingSoon")}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      ) : (
-        <View style={s.center}>
-          <Text style={s.icon}>🔧</Text>
-          <Text style={[s.title, { color: colors.textPrimary }]}>{workspaceId}</Text>
-        </View>
-      )}
-    </ScrollView>
+        ) : (
+          <View style={s.center}>
+            <Text style={s.icon}>🔧</Text>
+            <Text style={[s.title, { color: colors.textPrimary }]}>{workspaceId}</Text>
+          </View>
+        )}
+      </ScrollView>
+    </NeonBackground>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1 },
+  scroll: { flex: 1 },
   content: { padding: SPACING.xl },
-  header: { alignItems: "flex-end", marginBottom: SPACING.lg },
+  header: { paddingBottom: SPACING.lg, borderBottomWidth: 1, marginBottom: SPACING.lg },
   closeButton: { fontSize: TYPOGRAPHY.sm, fontWeight: FONT_WEIGHT.medium, padding: SPACING.sm },
   titleRow: { flexDirection: "row", alignItems: "center", gap: SPACING.lg, marginBottom: SPACING.xl },
   titleIcon: { fontSize: 40 },

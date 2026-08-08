@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "../../theme/ThemeProvider";
-import { RADIUS, TYPOGRAPHY, FONT_WEIGHT } from "../../theme/tokens";
+import { TYPOGRAPHY, FONT_WEIGHT, NEON } from "../../theme/tokens";
 
 interface AvatarProps {
   name: string;
@@ -21,7 +21,7 @@ function getInitials(name: string): string {
 }
 
 function getColorForName(name: string): string {
-  const palette = ["#8b0014", "#1a6b3c", "#2563eb", "#9333ea", "#d97706", "#0891b2"];
+  const palette = ["#c3002f", "#1a6b3c", "#2563eb", "#9333ea", "#d97706", "#0891b2"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -47,8 +47,13 @@ export function Avatar({ name, size = "md", isCore = false, status }: AvatarProp
             height: s,
             borderRadius: s / 2,
             backgroundColor: bgColor,
-            borderWidth: isCore ? 2 : 0,
-            borderColor: isCore ? colors.gold : "transparent",
+            borderWidth: isCore ? 2 : 1,
+            borderColor: isCore ? colors.gold : NEON.glow.red + "66",
+            shadowColor: isCore ? colors.gold : NEON.glow.red,
+            shadowOpacity: 0.4,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 4,
           },
         ]}
       >

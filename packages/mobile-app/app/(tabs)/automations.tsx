@@ -3,9 +3,9 @@ import { View, Text, FlatList, Switch, RefreshControl, StyleSheet } from "react-
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
 import { loadAutomations, setAutomationEnabled, type Automation } from "../../src/services/automationsService";
-import { EmptyState, Loader } from "../../src/components/ui";
+import { EmptyState, Loader, NeonBackground } from "../../src/components/ui";
 import { t } from "../../src/i18n";
 
 const KIND_LABEL: Record<string, string> = {
@@ -61,15 +61,26 @@ export default function AutomationsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bgBase }]}>
-        <Loader />
-      </View>
+      <NeonBackground>
+        <View style={[styles.center, {}]}>
+          <Loader />
+        </View>
+      </NeonBackground>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgBase }]}>
-      <View style={[styles.header, headerPadding]}>
+    <NeonBackground style={styles.container}>
+      <View
+        style={[
+          styles.header,
+          headerPadding,
+          {
+            backgroundColor: "rgba(10,4,20,0.55)",
+            borderBottomColor: NEON.glow.red + "40",
+          },
+        ]}
+      >
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t("automations.title")}</Text>
       </View>
 
@@ -78,7 +89,7 @@ export default function AutomationsScreen() {
         keyExtractor={(a) => a.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentGlow} />
         }
         ListHeaderComponent={
           loadError && automations.length > 0 ? (
@@ -107,8 +118,8 @@ export default function AutomationsScreen() {
             style={[
               styles.card,
               {
-                backgroundColor: colors.surface,
-                borderColor: colors.surfaceBorder + "14",
+                backgroundColor: "rgba(15,7,24,0.55)",
+                borderColor: NEON.glow.red + "30",
               },
             ]}
           >
@@ -128,7 +139,7 @@ export default function AutomationsScreen() {
           </View>
         )}
       />
-    </View>
+    </NeonBackground>
   );
 }
 
@@ -138,6 +149,7 @@ const styles = StyleSheet.create({
   header: {
     paddingBottom: SPACING.lg,
     paddingHorizontal: SPACING.xl,
+    borderBottomWidth: 1,
   },
   title: {
     fontSize: TYPOGRAPHY.xxl,

@@ -4,10 +4,10 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
 import { supabase } from "../../src/services/supabaseClient";
 import { AgentCard } from "../../src/components/agents";
-import { EmptyState, Loader } from "../../src/components/ui";
+import { EmptyState, Loader, NeonBackground } from "../../src/components/ui";
 import { t } from "../../src/i18n";
 import type { OrunAgent } from "../../src/types";
 
@@ -66,15 +66,26 @@ export default function AgentsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bgBase }]}>
-        <Loader />
-      </View>
+      <NeonBackground>
+        <View style={[styles.center, {}]}>
+          <Loader />
+        </View>
+      </NeonBackground>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgBase }]}>
-      <View style={[styles.header, headerPadding]}>
+    <NeonBackground style={styles.container}>
+      <View
+        style={[
+          styles.header,
+          headerPadding,
+          {
+            backgroundColor: "rgba(10,4,20,0.55)",
+            borderBottomColor: NEON.glow.red + "40",
+          },
+        ]}
+      >
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t("agents.title")}</Text>
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {t("agents.countAvailable", { count: String(agents.length) })}
@@ -88,7 +99,7 @@ export default function AgentsScreen() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.grid}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentGlow} />
         }
         ListEmptyComponent={
           loadError ? (
@@ -99,7 +110,7 @@ export default function AgentsScreen() {
         }
         renderItem={({ item }) => <AgentCard agent={item} onPress={handleAgentPress} />}
       />
-    </View>
+    </NeonBackground>
   );
 }
 
@@ -109,6 +120,7 @@ const styles = StyleSheet.create({
   header: {
     paddingBottom: SPACING.lg,
     paddingHorizontal: SPACING.xl,
+    borderBottomWidth: 1,
   },
   title: {
     fontSize: TYPOGRAPHY.xxl,

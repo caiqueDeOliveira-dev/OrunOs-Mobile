@@ -13,11 +13,13 @@ import {
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS, NEON } from "../../src/theme/tokens";
 import { useAuthStore } from "../../src/stores/authStore";
 import { supabase } from "../../src/services/supabaseClient";
+import { NeonBackground } from "../../src/components/ui/NeonBackground";
 import { t } from "../../src/i18n";
 
 interface AgentOption {
@@ -50,7 +52,7 @@ export default function HomeScreen() {
             useNativeDriver: true,
           }),
           Animated.timing(glowAnim, {
-            toValue: 0.7,
+            toValue: 0.8,
             duration: 2000,
             useNativeDriver: true,
           }),
@@ -62,7 +64,7 @@ export default function HomeScreen() {
             useNativeDriver: true,
           }),
           Animated.timing(glowAnim, {
-            toValue: 0.3,
+            toValue: 0.35,
             duration: 2000,
             useNativeDriver: true,
           }),
@@ -129,12 +131,18 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgBase }]}>
-      <View style={[styles.content, headerPadding]}>
-        <View style={styles.header}>
-          <Text style={[styles.greeting, { color: colors.textPrimary }]}>
-            {t("home.greeting")}, {session?.user?.email?.split("@")[0]}
-          </Text>
+    <NeonBackground>
+      <View style={styles.content}>
+        <View style={headerPadding}>
+          <View style={styles.header}>
+            <Text style={[styles.greeting, { color: colors.textPrimary }]}>
+              {t("home.greeting")}, {session?.user?.email?.split("@")[0]}
+            </Text>
+            <View style={styles.statusChip}>
+              <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
+              <Text style={[styles.statusText, { color: colors.textSecondary }]}>Online</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.centerArea}>
@@ -143,20 +151,23 @@ export default function HomeScreen() {
               styles.orbContainer,
               {
                 transform: [{ scale: pulseAnim }],
-                shadowColor: colors.accent,
               },
             ]}
           >
             <Animated.View
               style={[
-                styles.orbGlow,
+                styles.orbHalo,
                 {
-                  backgroundColor: colors.accent,
                   opacity: glowAnim,
+                  shadowColor: NEON.glow.red,
                 },
               ]}
             />
-            <View style={[styles.orb, { borderColor: colors.accent }]}>
+            <LinearGradient
+              colors={["rgba(255,45,111,0.28)", "rgba(195,0,47,0.08)", "rgba(255,209,102,0.18)"]}
+              style={[styles.orbGlow, { opacity: glowAnim.interpolate({ inputRange: [0.3, 0.8], outputRange: [0.25, 0.7] }) }]}
+            />
+            <View style={[styles.orb, { borderColor: NEON.glow.red + "88" }]}>
               <Image
                 source={require("../../assets/icon.png")}
                 style={styles.orbImage}
@@ -165,11 +176,23 @@ export default function HomeScreen() {
             </View>
           </Animated.View>
 
-          <Text style={[styles.orbLabel, { color: colors.textSecondary }]}>Hampton</Text>
+          <View style={styles.orbLabelWrap}>
+            <Text style={[styles.orbLabel, { color: colors.textSecondary }]}>Hampton</Text>
+            <View style={[styles.orbLine, { backgroundColor: NEON.glow.red + "66" }]} />
+          </View>
         </View>
 
         <View style={styles.inputArea}>
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "20" }]}>
+          <View
+            style={[
+              styles.inputWrapper,
+              {
+                backgroundColor: "rgba(15,7,24,0.6)",
+                borderColor: NEON.glow.red + "40",
+                shadowColor: NEON.glow.red,
+              },
+            ]}
+          >
             <TextInput
               style={[styles.input, { color: colors.textPrimary }]}
               placeholder={t("home.inputPlaceholder")}
@@ -182,7 +205,10 @@ export default function HomeScreen() {
               autoCorrect={false}
             />
             <Pressable
-              style={[styles.sendButton, { backgroundColor: input.trim() ? colors.accent : colors.surfaceHover }]}
+              style={[
+                styles.sendButton,
+                { backgroundColor: input.trim() ? colors.accent : "rgba(255,255,255,0.06)" },
+              ]}
               onPress={handleSubmit}
               accessibilityRole="button"
               accessibilityLabel={t("home.send")}
@@ -198,7 +224,15 @@ export default function HomeScreen() {
         </View>
 
         {showVoiceMenu && (
-          <View style={[styles.menu, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "20" }]}>
+          <View
+            style={[
+              styles.menu,
+              {
+                backgroundColor: "rgba(15,7,24,0.85)",
+                borderColor: NEON.glow.red + "40",
+              },
+            ]}
+          >
             <Pressable
               style={[styles.menuItem, { borderBottomColor: colors.surfaceBorder + "10" }]}
               onPress={() => {
@@ -206,13 +240,10 @@ export default function HomeScreen() {
                 router.push("/voice");
               }}
             >
-              <Ionicons name="mic-outline" size={20} color={colors.accent} />
+              <Ionicons name="mic-outline" size={20} color={colors.accentGlow} />
               <Text style={[styles.menuItemText, { color: colors.textPrimary }]}>{t("voice.title")}</Text>
             </Pressable>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => setShowVoiceMenu(false)}
-            >
+            <Pressable style={styles.menuItem} onPress={() => setShowVoiceMenu(false)}>
               <Ionicons name="close-outline" size={20} color={colors.textMuted} />
               <Text style={[styles.menuItemText, { color: colors.textMuted }]}>{t("common.cancel")}</Text>
             </Pressable>
@@ -220,7 +251,15 @@ export default function HomeScreen() {
         )}
 
         {showAgents && (
-          <View style={[styles.menu, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "20" }]}>
+          <View
+            style={[
+              styles.menu,
+              {
+                backgroundColor: "rgba(15,7,24,0.85)",
+                borderColor: NEON.glow.red + "40",
+              },
+            ]}
+          >
             {agents.length === 0 ? (
               <View style={styles.menuItem}>
                 <Ionicons name="people-outline" size={20} color={colors.textMuted} />
@@ -235,7 +274,7 @@ export default function HomeScreen() {
                     style={[styles.menuItem, { borderBottomColor: colors.surfaceBorder + "10" }]}
                     onPress={() => handleAgentPress(item.id)}
                   >
-                    <Ionicons name="person-outline" size={18} color={colors.accent} />
+                    <Ionicons name="person-outline" size={18} color={colors.accentGlow} />
                     <View style={styles.agentInfo}>
                       <Text style={[styles.menuItemText, { color: colors.textPrimary }]}>{item.name}</Text>
                       {item.role && (
@@ -248,10 +287,7 @@ export default function HomeScreen() {
                 style={styles.agentList}
               />
             )}
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => setShowAgents(false)}
-            >
+            <Pressable style={styles.menuItem} onPress={() => setShowAgents(false)}>
               <Ionicons name="close-outline" size={20} color={colors.textMuted} />
               <Text style={[styles.menuItemText, { color: colors.textMuted }]}>{t("common.close")}</Text>
             </Pressable>
@@ -260,42 +296,38 @@ export default function HomeScreen() {
 
         {!showAgents && !showVoiceMenu && (
           <View style={styles.suggestions}>
-            <Pressable
-              style={[styles.suggestionChip, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}
-              onPress={() => handleSuggestion("chat")}
-              accessibilityRole="button"
-              accessibilityLabel={t("home.suggestion.chat")}
-            >
-              <Ionicons name="chatbubble-outline" size={16} color={colors.accent} />
-              <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>{t("home.suggestion.chat")}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.suggestionChip, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}
-              onPress={() => handleSuggestion("voice")}
-              accessibilityRole="button"
-              accessibilityLabel={t("home.suggestion.voice")}
-            >
-              <Ionicons name="mic-outline" size={16} color={colors.accent} />
-              <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>{t("home.suggestion.voice")}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.suggestionChip, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}
-              onPress={() => handleSuggestion("agents")}
-              accessibilityRole="button"
-              accessibilityLabel={t("home.suggestion.agents")}
-            >
-              <Ionicons name="people-outline" size={16} color={colors.accent} />
-              <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>{t("home.suggestion.agents")}</Text>
-            </Pressable>
+            {(
+              [
+                { type: "chat", icon: "chatbubble-outline", label: t("home.suggestion.chat") },
+                { type: "voice", icon: "mic-outline", label: t("home.suggestion.voice") },
+                { type: "agents", icon: "people-outline", label: t("home.suggestion.agents") },
+              ] as const
+            ).map((chip) => (
+              <Pressable
+                key={chip.type}
+                style={[
+                  styles.suggestionChip,
+                  {
+                    backgroundColor: "rgba(15,7,24,0.55)",
+                    borderColor: NEON.glow.red + "30",
+                  },
+                ]}
+                onPress={() => handleSuggestion(chip.type)}
+                accessibilityRole="button"
+                accessibilityLabel={chip.label}
+              >
+                <Ionicons name={chip.icon} size={16} color={colors.accentGlow} />
+                <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>{chip.label}</Text>
+              </Pressable>
+            ))}
           </View>
         )}
       </View>
-    </View>
+    </NeonBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: {
     flex: 1,
     paddingHorizontal: SPACING.xl,
@@ -303,10 +335,34 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: SPACING.xl,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   greeting: {
     fontSize: TYPOGRAPHY.xl,
     fontWeight: FONT_WEIGHT.bold,
+    flex: 1,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    backgroundColor: "rgba(15,7,24,0.6)",
+    borderWidth: 1,
+    borderColor: NEON.glow.red + "33",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: TYPOGRAPHY.xs,
+    fontWeight: FONT_WEIGHT.medium,
   },
   centerArea: {
     alignItems: "center",
@@ -315,36 +371,53 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   orbContainer: {
-    width: 140,
-    height: 140,
+    width: 160,
+    height: 160,
     alignItems: "center",
     justifyContent: "center",
+  },
+  orbHalo: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 10,
+    shadowOpacity: 0.8,
+    shadowRadius: 46,
+    elevation: 16,
   },
   orbGlow: {
     position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
   },
   orb: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 124,
+    height: 124,
+    borderRadius: 62,
     borderWidth: 2,
     overflow: "hidden",
   },
   orbImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+  },
+  orbLabelWrap: {
+    alignItems: "center",
+    gap: SPACING.sm,
   },
   orbLabel: {
-    fontSize: TYPOGRAPHY.sm,
-    fontWeight: FONT_WEIGHT.medium,
+    fontSize: TYPOGRAPHY.lg,
+    fontWeight: FONT_WEIGHT.semibold,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  orbLine: {
+    width: 56,
+    height: 1.5,
+    borderRadius: 1,
   },
   inputArea: {
     gap: SPACING.sm,
@@ -352,10 +425,14 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     borderWidth: 1,
     paddingHorizontal: SPACING.md,
-    height: 52,
+    height: 54,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   input: {
     flex: 1,
@@ -363,9 +440,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
   },

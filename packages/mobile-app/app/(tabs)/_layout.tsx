@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
+import { TYPOGRAPHY, FONT_WEIGHT, NEON } from "../../src/theme/tokens";
 import { t } from "../../src/i18n";
 
 export default function TabsLayout() {
@@ -15,19 +15,26 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.bgBase,
-          borderTopColor: colors.surfaceBorder + "14",
+          backgroundColor: "rgba(10,4,20,0.72)",
+          borderTopColor: NEON.glow.red + "44",
           borderTopWidth: 1,
-          height: 60 + tabBarPadding.paddingBottom,
-          paddingTop: 8,
+          height: 64 + tabBarPadding.paddingBottom,
+          paddingTop: 6,
           ...tabBarPadding,
+          position: "absolute",
+          elevation: 0,
+          shadowColor: NEON.glow.red,
+          shadowOpacity: 0.25,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: -2 },
         },
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.accentGlow,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: TYPOGRAPHY.xs,
           fontWeight: FONT_WEIGHT.medium,
         },
+        sceneStyle: { backgroundColor: NEON.bg },
       }}
     >
       <Tabs.Screen
@@ -35,8 +42,8 @@ export default function TabsLayout() {
         options={{
           title: t("tab.home"),
           tabBarLabel: t("tab.home"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "home" : "home-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -45,8 +52,8 @@ export default function TabsLayout() {
         options={{
           title: t("tab.chat"),
           tabBarLabel: t("tab.chat"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "chatbubble" : "chatbubble-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -55,8 +62,8 @@ export default function TabsLayout() {
         options={{
           title: t("tab.agents"),
           tabBarLabel: t("tab.agents"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "people" : "people-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -65,8 +72,8 @@ export default function TabsLayout() {
         options={{
           title: t("memory.title"),
           tabBarLabel: t("memory.title"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "time" : "time-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -75,8 +82,8 @@ export default function TabsLayout() {
         options={{
           title: t("automations.title"),
           tabBarLabel: t("automations.title"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flash-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "flash" : "flash-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -85,8 +92,8 @@ export default function TabsLayout() {
         options={{
           title: t("tab.voice"),
           tabBarLabel: t("tab.voice"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="mic-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "mic" : "mic-outline"} size={size} color={color} />
           ),
         }}
       />
@@ -95,8 +102,8 @@ export default function TabsLayout() {
         options={{
           title: t("tab.settings"),
           tabBarLabel: t("tab.settings"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "settings" : "settings-outline"} size={size} color={color} />
           ),
         }}
       />

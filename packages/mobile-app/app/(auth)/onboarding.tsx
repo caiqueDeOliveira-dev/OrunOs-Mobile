@@ -5,8 +5,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
 import { t } from "../../src/i18n";
+import { NeonBackground } from "../../src/components/ui";
 
 const ONBOARDING_KEY = "orun-onboarding-done";
 
@@ -51,7 +52,7 @@ export default function OnboardingScreen() {
   const current = STEPS[step];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgBase }]}>
+    <NeonBackground style={styles.container}>
       <View style={[styles.header, headerPadding]}>
         <Pressable onPress={handleSkip}>
           <Text style={[styles.skipText, { color: colors.textMuted }]}>{t("common.close")}</Text>
@@ -59,7 +60,7 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={styles.center}>
-        <Text style={styles.icon}>{current.icon}</Text>
+        <Text style={[styles.icon, { textShadowColor: NEON.glow.red, textShadowRadius: 24 }]}>{current.icon}</Text>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t(current.titleKey)}</Text>
         <Text style={[styles.desc, { color: colors.textSecondary }]}>{t(current.descKey)}</Text>
 
@@ -70,8 +71,13 @@ export default function OnboardingScreen() {
               style={[
                 styles.dot,
                 {
-                  backgroundColor: i === step ? colors.accent : colors.surfaceActive,
+                  backgroundColor: i === step ? colors.accentGlow : colors.surfaceActive,
                   width: i === step ? 24 : 8,
+                  shadowColor: i === step ? colors.accentGlow : "transparent",
+                  shadowOpacity: 0.8,
+                  shadowRadius: 6,
+                  shadowOffset: { width: 0, height: 0 },
+                  elevation: i === step ? 6 : 0,
                 },
               ]}
             />
@@ -81,15 +87,26 @@ export default function OnboardingScreen() {
 
       <View style={styles.footer}>
         <Pressable
-          style={[styles.nextButton, { backgroundColor: colors.accent }]}
+          style={[
+            styles.nextButton,
+            {
+              backgroundColor: "rgba(15,7,24,0.6)",
+              borderColor: NEON.glow.red + "66",
+              shadowColor: NEON.glow.red,
+              shadowOpacity: 0.5,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 0 },
+              elevation: 8,
+            },
+          ]}
           onPress={handleNext}
         >
-          <Text style={[styles.nextText, { color: colors.textInverted }]}>
+          <Text style={[styles.nextText, { color: colors.accentGlow }]}>
             {step < STEPS.length - 1 ? t("common.confirm") : t("auth.signIn")}
           </Text>
         </Pressable>
       </View>
-    </View>
+    </NeonBackground>
   );
 }
 
@@ -143,6 +160,7 @@ const styles = StyleSheet.create({
   nextButton: {
     height: 52,
     borderRadius: RADIUS.md,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },

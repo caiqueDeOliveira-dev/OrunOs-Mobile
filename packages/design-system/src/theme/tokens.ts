@@ -12,7 +12,7 @@
  *  - minimal  : low-contrast, reduced glow, for accessibility / focus mode
  */
 
-export type OrunThemeName = "dark" | "bloodred" | "premium" | "minimal";
+export type OrunThemeName = "dark" | "bloodred" | "premium" | "minimal" | "neon";
 
 export type ThemeTokens = Record<string, string>;
 
@@ -107,6 +107,27 @@ export const themes: Record<OrunThemeName, ThemeTokens> = {
     "--orun-text-inverted": "14 14 15",
     "--orun-gold": "170 165 150",
     "--orun-gold-muted": "110 105 95",
+  },
+  neon: {
+    ...shared,
+    "--orun-bg-base": "5 2 8",
+    "--orun-bg-elevated": "12 5 18",
+    "--orun-bg-overlay": "18 10 28",
+    "--orun-bg-sunken": "3 1 10",
+    "--orun-surface": "15 7 24",
+    "--orun-surface-hover": "25 11 38",
+    "--orun-surface-active": "36 16 52",
+    "--orun-surface-border": "255 45 111",
+    "--orun-accent": "195 0 47",
+    "--orun-accent-hover": "255 30 86",
+    "--orun-accent-muted": "74 10 34",
+    "--orun-accent-glow": "255 45 111",
+    "--orun-text-primary": "251 246 255",
+    "--orun-text-secondary": "201 184 217",
+    "--orun-text-muted": "125 107 143",
+    "--orun-text-inverted": "5 2 8",
+    "--orun-gold": "255 209 102",
+    "--orun-gold-muted": "168 132 58",
   },
 };
 

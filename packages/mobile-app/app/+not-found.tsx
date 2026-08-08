@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../src/theme/ThemeProvider";
 import { useSafeArea } from "../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../src/theme/tokens";
+import { NeonBackground } from "../src/components/ui";
 import { t } from "../src/i18n";
 
 export default function NotFoundScreen() {
@@ -13,15 +14,15 @@ export default function NotFoundScreen() {
   const router = useRouter();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgBase }]}>
-      <View style={headerPadding}>
-        <Text style={[styles.emoji, { color: colors.textMuted }]}>404</Text>
+    <NeonBackground>
+      <View style={[styles.container, headerPadding]}>
+        <Text style={[styles.emoji, { color: colors.accentGlow, textShadowColor: NEON.glow.red, textShadowRadius: 20 }]}>404</Text>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t("notFound.title")}</Text>
         <Text style={[styles.message, { color: colors.textSecondary }]}>
           {t("notFound.message")}
         </Text>
         <Pressable
-          style={[styles.button, { backgroundColor: colors.accent }]}
+          style={[styles.button, { backgroundColor: colors.accent, shadowColor: colors.accentGlow, shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 2 }, elevation: 8 }]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             router.replace("/");
@@ -30,7 +31,7 @@ export default function NotFoundScreen() {
           <Text style={[styles.buttonText, { color: colors.textInverted }]}>{t("notFound.backToHome")}</Text>
         </Pressable>
       </View>
-    </View>
+    </NeonBackground>
   );
 }
 

@@ -7,13 +7,14 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
 import { t } from "../../src/i18n";
 import {
   loadScheduledJobs, createScheduledJob, toggleScheduledJob,
   deleteScheduledJob, loadJobRuns, describeCron,
   type ScheduledJob, type JobRun,
 } from "../../src/services/schedulerService";
+import { NeonBackground } from "../../src/components/ui";
 
 const AGENTS = [
   { id: "hampton", name: "Hampton" },
@@ -125,177 +126,186 @@ export default function SchedulerScreen() {
   };
 
   return (
-    <ScrollView
-      style={[s.container, { backgroundColor: colors.bgBase }]}
-      contentContainerStyle={s.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadJobs(); }} tintColor={colors.accent} />}
-    >
-      <View style={[s.header, headerPadding]}>
-        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
-          <Text style={[s.closeBtn, { color: colors.textMuted }]}>✕ {t("workspace.close")}</Text>
-        </Pressable>
-        <Text style={[s.headerTitle, { color: colors.textPrimary }]}>⚡ Agendador</Text>
-        <Pressable onPress={() => setShowCreate(true)} style={[s.addBtn, { backgroundColor: colors.accent }]}>
-          <Text style={s.addBtnText}>+ Novo</Text>
-        </Pressable>
-      </View>
-
-      {jobs.length === 0 && !loading && (
-        <View style={[s.emptyCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
-          <Text style={[s.emptyIcon, { color: colors.textMuted }]}>⚡</Text>
-          <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>Nenhum job agendado</Text>
-          <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
-            Crie jobs para seus agentes executarem tarefas automaticamente
-          </Text>
-        </View>
-      )}
-
-      {jobs.map((job) => (
-        <Pressable
-          key={job.id}
-          onPress={() => { setSelectedJob(job); loadRuns(job.id); }}
-          style={[s.jobCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14", opacity: job.enabled ? 1 : 0.5 }]}
+    <NeonBackground style={s.container}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadJobs(); }} tintColor={colors.accentGlow} />}
+      >
+        <View
+          style={[
+            s.header,
+            headerPadding,
+            { backgroundColor: "rgba(10,4,20,0.55)", borderBottomColor: NEON.glow.red + "40" },
+          ]}
         >
-          <View style={s.jobHeader}>
-            <View style={s.jobInfo}>
-              <Text style={[s.jobName, { color: colors.textPrimary }]}>{job.name}</Text>
-              <Text style={[s.jobAgent, { color: colors.accent }]}>{AGENTS.find((a) => a.id === job.agent_id)?.name ?? job.agent_id}</Text>
-            </View>
-            <View style={s.jobActions}>
-              <Pressable onPress={() => handleToggle(job)} style={[s.toggleBtn, { backgroundColor: job.enabled ? "#4CAF50" : colors.surfaceBorder }]}>
-                <Text style={s.toggleText}>{job.enabled ? "ON" : "OFF"}</Text>
-              </Pressable>
-              <Pressable onPress={() => handleDelete(job)} style={s.deleteBtn}>
-                <Text style={[s.deleteText, { color: "#F44336" }]}>✕</Text>
-              </Pressable>
-            </View>
+          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}>
+            <Text style={[s.closeBtn, { color: colors.textMuted }]}>✕ {t("workspace.close")}</Text>
+          </Pressable>
+          <Text style={[s.headerTitle, { color: colors.textPrimary }]}>⚡ Agendador</Text>
+          <Pressable onPress={() => setShowCreate(true)} style={[s.addBtn, { backgroundColor: colors.accent, shadowColor: colors.accentGlow, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 6 }]}>
+            <Text style={s.addBtnText}>+ Novo</Text>
+          </Pressable>
+        </View>
+
+        {jobs.length === 0 && !loading && (
+          <View style={[s.emptyCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+            <Text style={[s.emptyIcon, { color: colors.textMuted }]}>⚡</Text>
+            <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>Nenhum job agendado</Text>
+            <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
+              Crie jobs para seus agentes executarem tarefas automaticamente
+            </Text>
           </View>
-          <Text style={[s.jobCron, { color: colors.textSecondary }]}>{describeCron(job.cron_expression)}</Text>
-          <Text style={[s.jobPrompt, { color: colors.textMuted }]} numberOfLines={2}>{job.prompt}</Text>
-          {job.last_run_at && (
-            <Text style={[s.jobLastRun, { color: colors.textMuted }]}>
-              Ultima execucao: {new Date(job.last_run_at).toLocaleString("pt-BR")}
-            </Text>
-          )}
-        </Pressable>
-      ))}
+        )}
 
-      {/* Job Detail Modal */}
-      <Modal visible={!!selectedJob} transparent animationType="slide">
-        <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
-            <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.textPrimary }]}>{selectedJob?.name}</Text>
-              <Pressable onPress={() => setSelectedJob(null)}>
-                <Text style={[s.modalClose, { color: colors.textMuted }]}>✕</Text>
-              </Pressable>
+        {jobs.map((job) => (
+          <Pressable
+            key={job.id}
+            onPress={() => { setSelectedJob(job); loadRuns(job.id); }}
+            style={[s.jobCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30", opacity: job.enabled ? 1 : 0.5 }]}
+          >
+            <View style={s.jobHeader}>
+              <View style={s.jobInfo}>
+                <Text style={[s.jobName, { color: colors.textPrimary }]}>{job.name}</Text>
+                <Text style={[s.jobAgent, { color: colors.accentGlow }]}>{AGENTS.find((a) => a.id === job.agent_id)?.name ?? job.agent_id}</Text>
+              </View>
+              <View style={s.jobActions}>
+                <Pressable onPress={() => handleToggle(job)} style={[s.toggleBtn, { backgroundColor: job.enabled ? "#4CAF50" : colors.surfaceBorder }]}>
+                  <Text style={s.toggleText}>{job.enabled ? "ON" : "OFF"}</Text>
+                </Pressable>
+                <Pressable onPress={() => handleDelete(job)} style={s.deleteBtn}>
+                  <Text style={[s.deleteText, { color: "#F44336" }]}>✕</Text>
+                </Pressable>
+              </View>
             </View>
-            <Text style={[s.modalCron, { color: colors.accent }]}>
-              {selectedJob ? describeCron(selectedJob.cron_expression) : ""}
-            </Text>
-            <Text style={[s.modalPrompt, { color: colors.textSecondary }]}>{selectedJob?.prompt}</Text>
-
-            <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>HISTORICO</Text>
-            {runs.length === 0 ? (
-              <Text style={[s.noRuns, { color: colors.textMuted }]}>Nenhuma execucao ainda</Text>
-            ) : (
-              runs.map((run) => (
-                <View key={run.id} style={[s.runRow, { borderBottomColor: colors.surfaceBorder + "14" }]}>
-                  <View style={[s.runDot, { backgroundColor: statusColor(run.status) }]} />
-                  <View style={s.runInfo}>
-                    <Text style={[s.runStatus, { color: statusColor(run.status) }]}>
-                      {run.status === "success" ? "Sucesso" : run.status === "error" ? "Erro" : "Ignorado"}
-                    </Text>
-                    <Text style={[s.runTime, { color: colors.textMuted }]}>
-                      {new Date(run.ran_at).toLocaleString("pt-BR")}
-                      {run.duration_ms ? ` (${run.duration_ms}ms)` : ""}
-                    </Text>
-                  </View>
-                  {run.error_message && (
-                    <Text style={[s.runError, { color: "#F44336" }]} numberOfLines={1}>{run.error_message}</Text>
-                  )}
-                </View>
-              ))
+            <Text style={[s.jobCron, { color: colors.textSecondary }]}>{describeCron(job.cron_expression)}</Text>
+            <Text style={[s.jobPrompt, { color: colors.textMuted }]} numberOfLines={2}>{job.prompt}</Text>
+            {job.last_run_at && (
+              <Text style={[s.jobLastRun, { color: colors.textMuted }]}>
+                Ultima execucao: {new Date(job.last_run_at).toLocaleString("pt-BR")}
+              </Text>
             )}
-          </View>
-        </View>
-      </Modal>
+          </Pressable>
+        ))}
 
-      {/* Create Modal */}
-      <Modal visible={showCreate} transparent animationType="slide">
-        <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
-            <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Novo Job</Text>
-              <Pressable onPress={() => setShowCreate(false)}>
-                <Text style={[s.modalClose, { color: colors.textMuted }]}>✕</Text>
+        {/* Job Detail Modal */}
+        <Modal visible={!!selectedJob} transparent animationType="slide">
+          <View style={s.modalOverlay}>
+            <View style={[s.modalContent, { backgroundColor: "#0D0518" }]}>
+              <View style={s.modalHeader}>
+                <Text style={[s.modalTitle, { color: colors.textPrimary }]}>{selectedJob?.name}</Text>
+                <Pressable onPress={() => setSelectedJob(null)}>
+                  <Text style={[s.modalClose, { color: colors.textMuted }]}>✕</Text>
+                </Pressable>
+              </View>
+              <Text style={[s.modalCron, { color: colors.accentGlow }]}>
+                {selectedJob ? describeCron(selectedJob.cron_expression) : ""}
+              </Text>
+              <Text style={[s.modalPrompt, { color: colors.textSecondary }]}>{selectedJob?.prompt}</Text>
+
+              <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>HISTORICO</Text>
+              {runs.length === 0 ? (
+                <Text style={[s.noRuns, { color: colors.textMuted }]}>Nenhuma execucao ainda</Text>
+              ) : (
+                runs.map((run) => (
+                  <View key={run.id} style={[s.runRow, { borderBottomColor: NEON.glow.red + "30" }]}>
+                    <View style={[s.runDot, { backgroundColor: statusColor(run.status) }]} />
+                    <View style={s.runInfo}>
+                      <Text style={[s.runStatus, { color: statusColor(run.status) }]}>
+                        {run.status === "success" ? "Sucesso" : run.status === "error" ? "Erro" : "Ignorado"}
+                      </Text>
+                      <Text style={[s.runTime, { color: colors.textMuted }]}>
+                        {new Date(run.ran_at).toLocaleString("pt-BR")}
+                        {run.duration_ms ? ` (${run.duration_ms}ms)` : ""}
+                      </Text>
+                    </View>
+                    {run.error_message && (
+                      <Text style={[s.runError, { color: "#F44336" }]} numberOfLines={1}>{run.error_message}</Text>
+                    )}
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Create Modal */}
+        <Modal visible={showCreate} transparent animationType="slide">
+          <View style={s.modalOverlay}>
+            <View style={[s.modalContent, { backgroundColor: "#0D0518" }]}>
+              <View style={s.modalHeader}>
+                <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Novo Job</Text>
+                <Pressable onPress={() => setShowCreate(false)}>
+                  <Text style={[s.modalClose, { color: colors.textMuted }]}>✕</Text>
+                </Pressable>
+              </View>
+
+              <Text style={[s.label, { color: colors.textSecondary }]}>Agente</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.agentRow}>
+                {AGENTS.map((a) => (
+                  <Pressable
+                    key={a.id}
+                    onPress={() => setNewAgent(a.id)}
+                    style={[s.agentChip, { backgroundColor: newAgent === a.id ? colors.accent : "rgba(10,4,20,0.6)", borderColor: newAgent === a.id ? colors.accent : NEON.glow.red + "40" }]}
+                  >
+                    <Text style={[s.agentChipText, { color: newAgent === a.id ? "#fff" : colors.textPrimary }]}>{a.name}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <Text style={[s.label, { color: colors.textSecondary }]}>Nome</Text>
+              <TextInput
+                style={[s.input, { backgroundColor: "rgba(10,4,20,0.6)", color: colors.textPrimary, borderColor: NEON.glow.red + "40" }]}
+                value={newName}
+                onChangeText={setNewName}
+                placeholder="Ex: Resumo diario"
+                placeholderTextColor={colors.textMuted}
+              />
+
+              <Text style={[s.label, { color: colors.textSecondary }]}>Horario</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.presetRow}>
+                {CRON_PRESETS.map((p) => (
+                  <Pressable
+                    key={p.value}
+                    onPress={() => setNewCron(p.value)}
+                    style={[s.presetChip, { backgroundColor: newCron === p.value ? colors.accent : "rgba(10,4,20,0.6)", borderColor: newCron === p.value ? colors.accent : NEON.glow.red + "40" }]}
+                  >
+                    <Text style={[s.presetText, { color: newCron === p.value ? "#fff" : colors.textPrimary }]}>{p.label}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              <Text style={[s.label, { color: colors.textSecondary }]}>Prompt</Text>
+              <TextInput
+                style={[s.input, s.textArea, { backgroundColor: "rgba(10,4,20,0.6)", color: colors.textPrimary, borderColor: NEON.glow.red + "40" }]}
+                value={newPrompt}
+                onChangeText={setNewPrompt}
+                placeholder="O que o agente deve fazer..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={3}
+              />
+
+              <Pressable
+                onPress={handleCreate}
+                disabled={creating || !newName.trim() || !newPrompt.trim()}
+                style={[s.createBtn, { backgroundColor: colors.accent, opacity: creating || !newName.trim() || !newPrompt.trim() ? 0.5 : 1 }]}
+              >
+                <Text style={s.createBtnText}>{creating ? "Criando..." : "Criar Job"}</Text>
               </Pressable>
             </View>
-
-            <Text style={[s.label, { color: colors.textSecondary }]}>Agente</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.agentRow}>
-              {AGENTS.map((a) => (
-                <Pressable
-                  key={a.id}
-                  onPress={() => setNewAgent(a.id)}
-                  style={[s.agentChip, { backgroundColor: newAgent === a.id ? colors.accent : colors.bgBase, borderColor: newAgent === a.id ? colors.accent : colors.surfaceBorder + "14" }]}
-                >
-                  <Text style={[s.agentChipText, { color: newAgent === a.id ? "#fff" : colors.textPrimary }]}>{a.name}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-
-            <Text style={[s.label, { color: colors.textSecondary }]}>Nome</Text>
-            <TextInput
-              style={[s.input, { backgroundColor: colors.bgBase, color: colors.textPrimary, borderColor: colors.surfaceBorder + "14" }]}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="Ex: Resumo diario"
-              placeholderTextColor={colors.textMuted}
-            />
-
-            <Text style={[s.label, { color: colors.textSecondary }]}>Horario</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.presetRow}>
-              {CRON_PRESETS.map((p) => (
-                <Pressable
-                  key={p.value}
-                  onPress={() => setNewCron(p.value)}
-                  style={[s.presetChip, { backgroundColor: newCron === p.value ? colors.accent : colors.bgBase, borderColor: newCron === p.value ? colors.accent : colors.surfaceBorder + "14" }]}
-                >
-                  <Text style={[s.presetText, { color: newCron === p.value ? "#fff" : colors.textPrimary }]}>{p.label}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-
-            <Text style={[s.label, { color: colors.textSecondary }]}>Prompt</Text>
-            <TextInput
-              style={[s.input, s.textArea, { backgroundColor: colors.bgBase, color: colors.textPrimary, borderColor: colors.surfaceBorder + "14" }]}
-              value={newPrompt}
-              onChangeText={setNewPrompt}
-              placeholder="O que o agente deve fazer..."
-              placeholderTextColor={colors.textMuted}
-              multiline
-              numberOfLines={3}
-            />
-
-            <Pressable
-              onPress={handleCreate}
-              disabled={creating || !newName.trim() || !newPrompt.trim()}
-              style={[s.createBtn, { backgroundColor: colors.accent, opacity: creating || !newName.trim() || !newPrompt.trim() ? 0.5 : 1 }]}
-            >
-              <Text style={s.createBtnText}>{creating ? "Criando..." : "Criar Job"}</Text>
-            </Pressable>
           </View>
-        </View>
-      </Modal>
-    </ScrollView>
+        </Modal>
+      </ScrollView>
+    </NeonBackground>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1 },
+  scroll: { flex: 1 },
   content: { padding: SPACING.xl },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACING.xl },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: SPACING.lg, borderBottomWidth: 1, marginBottom: SPACING.xl },
   closeBtn: { fontSize: TYPOGRAPHY.sm, fontWeight: FONT_WEIGHT.medium, padding: SPACING.sm },
   headerTitle: { fontSize: TYPOGRAPHY.xl, fontWeight: FONT_WEIGHT.bold, flex: 1, marginLeft: SPACING.md },
   addBtn: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.md },

@@ -6,7 +6,7 @@
  * Maps directly from packages/design-system/src/theme/tokens.ts "bloodred" theme.
  */
 
-export type ThemeName = "dark" | "bloodred" | "premium" | "minimal";
+export type ThemeName = "dark" | "bloodred" | "premium" | "minimal" | "neon";
 
 export interface ThemeColors {
   bgBase: string;
@@ -125,6 +125,27 @@ export const themes: Record<ThemeName, ThemeColors> = {
     gold: "#aaa596",
     goldMuted: "#6e695f",
   },
+  neon: {
+    ...shared,
+    bgBase: "#050208",
+    bgElevated: "#0c0512",
+    bgOverlay: "#120a1c",
+    bgSunken: "#03010a",
+    surface: "#0f0718",
+    surfaceHover: "#190b26",
+    surfaceActive: "#241034",
+    surfaceBorder: "#ff2d6f",
+    accent: "#c3002f",
+    accentHover: "#ff1e56",
+    accentMuted: "#4a0a22",
+    accentGlow: "#ff2d6f",
+    textPrimary: "#fbf6ff",
+    textSecondary: "#c9b8d9",
+    textMuted: "#7d6b8f",
+    textInverted: "#050208",
+    gold: "#ffd166",
+    goldMuted: "#a8843a",
+  },
 };
 
 export const SPACING = {
@@ -161,3 +182,27 @@ export const FONT_WEIGHT = {
   semibold: "600" as const,
   bold: "700" as const,
 };
+
+/**
+ * Neon/Glass — gradient & glow presets for the futuristic look.
+ * Always used with expo-linear-gradient + expo-blur.
+ */
+export const NEON = {
+  bg: "#050208",
+  gradient: {
+    background: ["#050208", "#0a0216", "#140326"] as const,
+    card: ["rgba(30,12,48,0.55)", "rgba(10,4,20,0.65)"] as const,
+    accent: ["#ff1e56", "#c3002f"] as const,
+    gold: ["#ffd166", "#ff7a1a"] as const,
+    chip: ["rgba(255,45,111,0.16)", "rgba(195,0,47,0.06)"] as const,
+  },
+  glow: {
+    red: "#ff2d6f",
+    gold: "#ffd166",
+    soft: "rgba(255,45,111,0.25)",
+  },
+  glass: {
+    blur: 18,
+    tint: "dark" as const,
+  },
+} as const;

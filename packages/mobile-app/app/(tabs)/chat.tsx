@@ -15,12 +15,12 @@ import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
 import { useChat } from "../../src/hooks";
 import { MessageBubble, ChatInput } from "../../src/components/chat";
 import { CameraCapture } from "../../src/components/camera/CameraCapture";
 import { ProviderPicker } from "../../src/components/ProviderPicker";
-import { EmptyState } from "../../src/components/ui";
+import { EmptyState, NeonBackground } from "../../src/components/ui";
 import { scheduleLocalNotification } from "../../src/services/notificationService";
 import { checkRateLimit, getRateLimitRemaining } from "../../src/services/rateLimiter";
 import { t } from "../../src/i18n";
@@ -137,52 +137,70 @@ export default function ChatScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bgBase }]}>
-        <ActivityIndicator color={colors.accent} />
-        <Text style={[styles.loadingText, { color: colors.textMuted }]}>{t("chat.loading")}</Text>
-      </View>
+      <NeonBackground>
+        <View style={[styles.center, {}]}>
+          <ActivityIndicator color={colors.accentGlow} />
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>{t("chat.loading")}</Text>
+        </View>
+      </NeonBackground>
     );
   }
 
   if (error && messages.length === 0) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bgBase }]}>
-        <EmptyState
-          title={t("chat.error.load")}
-          message={error}
-          actionLabel={t("common.retry")}
-          onAction={() => setRetryKey((k) => k + 1)}
-        />
-      </View>
+      <NeonBackground>
+        <View style={[styles.center, {}]}>
+          <EmptyState
+            title={t("chat.error.load")}
+            message={error}
+            actionLabel={t("common.retry")}
+            onAction={() => setRetryKey((k) => k + 1)}
+          />
+        </View>
+      </NeonBackground>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgBase }]}
+      style={[styles.container, { backgroundColor: "transparent" }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={keyboardOffset}
     >
-      <View
-        style={[
-          styles.header,
-          headerPadding,
-          { backgroundColor: colors.bgBase, borderBottomColor: colors.surfaceBorder + "14" },
-        ]}
-      >
-        <View style={styles.headerLeft}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Hampton</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>{t("chat.online")}</Text>
-        </View>
-        <Pressable
-          onPress={() => setProviderVisible(true)}
-          style={[styles.providerButton, { backgroundColor: colors.accent + "15" }]}
+      <NeonBackground>
+        <View
+          style={[
+            styles.header,
+            headerPadding,
+            {
+              backgroundColor: "rgba(10,4,20,0.55)",
+              borderBottomColor: NEON.glow.red + "40",
+            },
+          ]}
         >
-          <Text style={[styles.providerButtonText, { color: colors.accent }]}>
-            ⚡ {currentModel.split("/").pop()}
-          </Text>
-        </Pressable>
-      </View>
+          <View style={styles.headerLeft}>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Hampton</Text>
+            <View style={styles.headerStatusRow}>
+              <View style={[styles.headerDot, { backgroundColor: colors.success }]} />
+              <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>{t("chat.online")}</Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={() => setProviderVisible(true)}
+            style={[
+              styles.providerButton,
+              {
+                backgroundColor: colors.accent + "22",
+                borderColor: NEON.glow.red + "55",
+              },
+            ]}
+          >
+            <Text style={[styles.providerButtonText, { color: colors.accentGlow }]}>
+              ⚡ {currentModel.split("/").pop()}
+            </Text>
+          </Pressable>
+        </View>
+      </NeonBackground>
 
       <FlatList
         ref={flatListRef}
@@ -301,6 +319,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerLeft: { alignItems: "flex-start" },
+  headerStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 3,
+  },
+  headerDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
   headerTitle: {
     fontSize: TYPOGRAPHY.lg,
     fontWeight: FONT_WEIGHT.bold,

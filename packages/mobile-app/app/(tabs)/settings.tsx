@@ -6,13 +6,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
 import { useAuthStore } from "../../src/stores/authStore";
 import { setLocale, getLocale, t, type Locale } from "../../src/i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NeonBackground } from "../../src/components/ui";
 import type { ThemeName } from "../../src/theme/tokens";
 
 const THEMES: { name: ThemeName; label: string }[] = [
+  { name: "neon", label: "Neon" },
   { name: "bloodred", label: "Blood Red" },
   { name: "dark", label: "Dark" },
   { name: "premium", label: "Premium" },
@@ -88,163 +90,176 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.bgBase }]} contentContainerStyle={styles.content}>
-      <View style={headerPadding}>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>{t("settings.title")}</Text>
-      </View>
+    <NeonBackground style={styles.container}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <View
+          style={[
+            styles.header,
+            headerPadding,
+            { backgroundColor: "rgba(10,4,20,0.55)", borderBottomColor: NEON.glow.red + "40" },
+          ]}
+        >
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t("settings.title")}</Text>
+        </View>
 
-      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.theme")}</Text>
-        <View style={styles.themeGrid}>
-          {THEMES.map((th) => (
+        <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.theme")}</Text>
+          <View style={styles.themeGrid}>
+            {THEMES.map((th) => (
+              <Pressable
+                key={th.name}
+                style={[
+                  styles.themeOption,
+                  {
+                    backgroundColor: themeName === th.name ? colors.accent : "rgba(10,4,20,0.6)",
+                    borderColor: themeName === th.name ? colors.accent : NEON.glow.red + "40",
+                  },
+                ]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setTheme(th.name);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.themeLabel,
+                    { color: themeName === th.name ? colors.textInverted : colors.textPrimary },
+                  ]}
+                >
+                  {th.label}
+                </Text>
+              </Pressable>
+            ))}
             <Pressable
-              key={th.name}
               style={[
                 styles.themeOption,
                 {
-                  backgroundColor: themeName === th.name ? colors.accent : colors.bgSunken,
-                  borderColor: themeName === th.name ? colors.accent : colors.surfaceBorder + "20",
+                  backgroundColor: themeMode === "system" ? colors.accent : "rgba(10,4,20,0.6)",
+                  borderColor: themeMode === "system" ? colors.accent : NEON.glow.red + "40",
                 },
               ]}
               onPress={() => {
                 Haptics.selectionAsync();
-                setTheme(th.name);
+                setThemeMode("system");
               }}
             >
               <Text
                 style={[
                   styles.themeLabel,
-                  { color: themeName === th.name ? colors.textInverted : colors.textPrimary },
+                  { color: themeMode === "system" ? colors.textInverted : colors.textPrimary },
                 ]}
               >
-                {th.label}
+                Auto
               </Text>
             </Pressable>
-          ))}
+          </View>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.language")}</Text>
+          <View style={styles.themeGrid}>
+            {LANGUAGES.map((lang) => (
+              <Pressable
+                key={lang.code}
+                style={[
+                  styles.themeOption,
+                  {
+                    backgroundColor: currentLang === lang.code ? colors.accent : "rgba(10,4,20,0.6)",
+                    borderColor: currentLang === lang.code ? colors.accent : NEON.glow.red + "40",
+                  },
+                ]}
+                onPress={() => handleLanguageChange(lang.code)}
+              >
+                <Text
+                  style={[
+                    styles.themeLabel,
+                    { color: currentLang === lang.code ? colors.textInverted : colors.textPrimary },
+                  ]}
+                >
+                  {lang.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+          <View style={styles.row}>
+            <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{t("settings.notifications")}</Text>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={toggleNotifications}
+              trackColor={{ false: colors.surfaceActive, true: colors.accent }}
+              thumbColor={colors.textPrimary}
+            />
+          </View>
+          <View style={[styles.divider, { backgroundColor: NEON.glow.red + "30" }]} />
+          <View style={styles.row}>
+            <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{t("settings.biometric")}</Text>
+            <Switch
+              value={biometricEnabled}
+              onValueChange={toggleBiometric}
+              trackColor={{ false: colors.surfaceActive, true: colors.accent }}
+              thumbColor={colors.textPrimary}
+            />
+          </View>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.about")}</Text>
+          <Text style={[styles.version, { color: colors.textMuted }]}>{t("settings.version", { version: "0.2.0" })}</Text>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Pressable
-            style={[
-              styles.themeOption,
-              {
-                backgroundColor: themeMode === "system" ? colors.accent : colors.bgSunken,
-                borderColor: themeMode === "system" ? colors.accent : colors.surfaceBorder + "20",
-              },
-            ]}
+            style={styles.row}
             onPress={() => {
               Haptics.selectionAsync();
-              setThemeMode("system");
+              router.push("/providers");
             }}
+            accessibilityRole="button"
+            accessibilityLabel={t("providers.title")}
           >
-            <Text
-              style={[
-                styles.themeLabel,
-                { color: themeMode === "system" ? colors.textInverted : colors.textPrimary },
-              ]}
-            >
-              Auto
-            </Text>
+            <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{t("providers.title")}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
         </View>
-      </View>
 
-      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.language")}</Text>
-        <View style={styles.themeGrid}>
-          {LANGUAGES.map((lang) => (
-            <Pressable
-              key={lang.code}
-              style={[
-                styles.themeOption,
-                {
-                  backgroundColor: currentLang === lang.code ? colors.accent : colors.bgSunken,
-                  borderColor: currentLang === lang.code ? colors.accent : colors.surfaceBorder + "20",
-                },
-              ]}
-              onPress={() => handleLanguageChange(lang.code)}
-            >
-              <Text
-                style={[
-                  styles.themeLabel,
-                  { color: currentLang === lang.code ? colors.textInverted : colors.textPrimary },
-                ]}
-              >
-                {lang.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{t("settings.notifications")}</Text>
-          <Switch
-            value={notificationsEnabled}
-            onValueChange={toggleNotifications}
-            trackColor={{ false: colors.surfaceActive, true: colors.accent }}
-            thumbColor={colors.textPrimary}
-          />
-        </View>
-        <View style={[styles.divider, { backgroundColor: colors.surfaceBorder + "14" }]} />
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{t("settings.biometric")}</Text>
-          <Switch
-            value={biometricEnabled}
-            onValueChange={toggleBiometric}
-            trackColor={{ false: colors.surfaceActive, true: colors.accent }}
-            thumbColor={colors.textPrimary}
-          />
-        </View>
-      </View>
-
-      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.about")}</Text>
-        <Text style={[styles.version, { color: colors.textMuted }]}>{t("settings.version", { version: "0.2.0" })}</Text>
-      </View>
-
-      <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
         <Pressable
-          style={styles.row}
+          style={[styles.signOutButton, { borderColor: colors.danger + "40" }]}
           onPress={() => {
-            Haptics.selectionAsync();
-            router.push("/providers");
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            Alert.alert(
+              t("settings.signOut"),
+              t("settings.signOutConfirm"),
+              [
+                { text: t("common.cancel"), style: "cancel" },
+                { text: t("settings.signOut"), style: "destructive", onPress: () => signOut() },
+              ]
+            );
           }}
           accessibilityRole="button"
-          accessibilityLabel={t("providers.title")}
+          accessibilityLabel={t("settings.signOut")}
         >
-          <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{t("providers.title")}</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Text style={[styles.signOutText, { color: colors.danger }]}>{t("settings.signOut")}</Text>
         </Pressable>
-      </View>
-
-      <Pressable
-        style={[styles.signOutButton, { borderColor: colors.danger + "40" }]}
-        onPress={() => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          Alert.alert(
-            t("settings.signOut"),
-            t("settings.signOutConfirm"),
-            [
-              { text: t("common.cancel"), style: "cancel" },
-              { text: t("settings.signOut"), style: "destructive", onPress: () => signOut() },
-            ]
-          );
-        }}
-        accessibilityRole="button"
-        accessibilityLabel={t("settings.signOut")}
-      >
-        <Text style={[styles.signOutText, { color: colors.danger }]}>{t("settings.signOut")}</Text>
-      </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </NeonBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scroll: { flex: 1 },
   content: {
-    padding: SPACING.xl,
-    paddingTop: 0,
     paddingBottom: SPACING.xxl,
     gap: SPACING.lg,
+  },
+  header: {
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    borderBottomWidth: 1,
+    marginBottom: SPACING.md,
   },
   title: {
     fontSize: TYPOGRAPHY.xxl,
@@ -256,6 +271,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: SPACING.lg,
     gap: SPACING.md,
+    marginHorizontal: SPACING.xl,
   },
   sectionTitle: {
     fontSize: TYPOGRAPHY.sm,
@@ -300,6 +316,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     marginTop: SPACING.lg,
+    marginHorizontal: SPACING.xl,
   },
   signOutText: {
     fontSize: TYPOGRAPHY.md,

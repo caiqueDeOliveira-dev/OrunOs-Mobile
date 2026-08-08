@@ -18,8 +18,8 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  themeName: "bloodred",
-  colors: themes.bloodred,
+  themeName: "neon",
+  colors: themes.neon,
   isDark: true,
   themeMode: "system",
   setTheme: () => {},
@@ -28,7 +28,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
-  const [themeName, setThemeName] = useState<ThemeName>("bloodred");
+  const [themeName, setThemeName] = useState<ThemeName>("neon");
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // When system scheme changes and mode is "system", auto-switch theme
   useEffect(() => {
     if (themeMode === "system") {
-      setThemeName(systemScheme === "dark" ? "dark" : "minimal");
+      setThemeName(systemScheme === "dark" ? "neon" : "minimal");
     }
   }, [systemScheme, themeMode]);
 
@@ -63,7 +63,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeModeState(mode);
     AsyncStorage.setItem(THEME_MODE_KEY, mode);
     if (mode === "system") {
-      const sysTheme = useColorScheme() === "dark" ? "dark" : "minimal";
+      const sysTheme = useColorScheme() === "dark" ? "neon" : "minimal";
       setThemeName(sysTheme);
       AsyncStorage.setItem(THEME_KEY, sysTheme);
     }

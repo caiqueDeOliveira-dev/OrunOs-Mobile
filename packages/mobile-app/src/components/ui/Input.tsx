@@ -14,20 +14,27 @@ export function Input({ label, error, style, ...rest }: InputProps) {
   return (
     <View style={styles.container}>
       {label && <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>}
-      <TextInput
+      <View
         style={[
-          styles.input,
+          styles.field,
           {
             backgroundColor: colors.bgSunken,
-            borderColor: error ? colors.danger : colors.surfaceBorder + "20",
-            color: colors.textPrimary,
+            borderColor: error ? colors.danger : colors.surfaceBorder + "33",
+            shadowColor: error ? colors.danger : colors.accentGlow,
+            shadowOpacity: error ? 0.4 : 0.2,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 3,
           },
-          style,
         ]}
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-        {...rest}
-      />
+      >
+        <TextInput
+          style={[styles.input, { color: colors.textPrimary }, style]}
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          {...rest}
+        />
+      </View>
       {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
     </View>
   );
@@ -42,10 +49,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginLeft: SPACING.xs,
   },
-  input: {
+  field: {
     height: 48,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
+    justifyContent: "center",
+  },
+  input: {
     paddingHorizontal: SPACING.lg,
     fontSize: TYPOGRAPHY.md,
   },

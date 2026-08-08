@@ -13,10 +13,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../src/theme/tokens";
 import { useChat } from "../../src/hooks";
 import { MessageBubble, ChatInput } from "../../src/components/chat";
-import { EmptyState } from "../../src/components/ui";
+import { EmptyState, NeonBackground } from "../../src/components/ui";
 import { t } from "../../src/i18n";
 
 const PAGE_SIZE = 30;
@@ -61,41 +61,45 @@ export default function AgentChatScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bgBase }]}>
-        <ActivityIndicator color={colors.accent} />
-      </View>
+      <NeonBackground>
+        <View style={[styles.center, {}]}>
+          <ActivityIndicator color={colors.accentGlow} />
+        </View>
+      </NeonBackground>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgBase }]}
+      style={[styles.container, { backgroundColor: "transparent" }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={keyboardOffset}
     >
-      <View
-        style={[
-          styles.header,
-          headerPadding,
-          { backgroundColor: colors.bgBase, borderBottomColor: colors.surfaceBorder + "14" },
-        ]}
-      >
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={styles.backButton}
-          accessibilityRole="button"
-          accessibilityLabel={t("common.back")}
+      <NeonBackground>
+        <View
+          style={[
+            styles.header,
+            headerPadding,
+            { backgroundColor: "rgba(10,4,20,0.55)", borderBottomColor: NEON.glow.red + "40" },
+          ]}
         >
-          <Text style={[styles.backText, { color: colors.accent }]}>{t("common.back")}</Text>
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{agentName}</Text>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.back")}
+          >
+            <Text style={[styles.backText, { color: colors.accentGlow }]}>{t("common.back")}</Text>
+          </Pressable>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{agentName}</Text>
+          </View>
+          <View style={styles.backButton} />
         </View>
-        <View style={styles.backButton} />
-      </View>
+      </NeonBackground>
 
       <FlatList
         ref={flatListRef}
@@ -109,14 +113,14 @@ export default function AgentChatScreen() {
           hasMore ? (
             <Pressable
               onPress={loadMore}
-              style={[styles.loadMoreButton, { borderColor: colors.surfaceBorder + "14" }]}
+              style={[styles.loadMoreButton, { borderColor: NEON.glow.red + "40" }]}
               accessibilityRole="button"
               accessibilityLabel={t("common.loadMore")}
             >
               {loadingMore ? (
-                <ActivityIndicator color={colors.accent} size="small" />
+                <ActivityIndicator color={colors.accentGlow} size="small" />
               ) : (
-                <Text style={[styles.loadMoreText, { color: colors.accent }]}>
+                <Text style={[styles.loadMoreText, { color: colors.accentGlow }]}>
                   {t("common.loadMore")} ({messages.length - displayCount})
                 </Text>
               )}
@@ -133,7 +137,7 @@ export default function AgentChatScreen() {
       />
 
       {error && (
-        <Text style={[styles.errorBanner, { color: colors.warning, backgroundColor: colors.bgOverlay }]}>
+        <Text style={[styles.errorBanner, { color: colors.warning, backgroundColor: "rgba(15,7,24,0.7)" }]}>
           {error}
         </Text>
       )}

@@ -1,8 +1,9 @@
 import React, { memo, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../theme/ThemeProvider";
-import { RADIUS, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../theme/tokens";
+import { NEON, RADIUS, SPACING, TYPOGRAPHY, FONT_WEIGHT } from "../../theme/tokens";
 import { Avatar } from "../ui/Avatar";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { speak, stopSpeaking, isSpeaking } from "../../services/voiceService";
@@ -60,19 +61,26 @@ export const MessageBubble = memo(function MessageBubble({
           style={[
             styles.bubble,
             isUser
-              ? { backgroundColor: colors.accent, borderBottomRightRadius: 4 }
+              ? { borderBottomRightRadius: 4, overflow: "hidden", padding: 0 }
               : {
-                  backgroundColor: colors.surface,
+                  backgroundColor: "rgba(15,7,24,0.5)",
                   borderBottomLeftRadius: 4,
                   borderWidth: 1,
-                  borderColor: colors.surfaceBorder + "14",
+                  borderColor: NEON.glow.red + "2E",
                 },
           ]}
         >
           {isUser ? (
-            <Text style={[styles.text, { color: colors.textInverted }]}>
-              {message.content}
-            </Text>
+            <LinearGradient
+              colors={[...NEON.gradient.accent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.userFill}
+            >
+              <Text style={[styles.text, { color: colors.textInverted }]}>
+                {message.content}
+              </Text>
+            </LinearGradient>
           ) : (
             <MarkdownRenderer content={message.content} />
           )}
@@ -130,6 +138,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
+  },
+  userFill: {
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
   },
   text: {
     fontSize: TYPOGRAPHY.md,

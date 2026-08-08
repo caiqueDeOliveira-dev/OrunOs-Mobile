@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, Pressable, Animated, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../src/theme/ThemeProvider";
 import { useSafeArea } from "../../src/hooks/useSafeArea";
-import { SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
+import { NEON, SPACING, TYPOGRAPHY, FONT_WEIGHT, RADIUS } from "../../src/theme/tokens";
 import { t } from "../../src/i18n";
 import {
   requestMicPermission,
@@ -14,6 +15,7 @@ import {
   stopSpeaking,
 } from "../../src/services/voiceService";
 import { sendVoiceMessage } from "../../src/services/chatService";
+import { NeonBackground } from "../../src/components/ui";
 
 type VoiceState = "idle" | "recording" | "processing" | "transcribing" | "speaking" | "error";
 
@@ -165,8 +167,17 @@ export default function VoiceScreen() {
   const config = stateConfig[state];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgBase }]}>
-      <View style={[styles.header, headerPadding]}>
+    <NeonBackground style={styles.container}>
+      <View
+        style={[
+          styles.header,
+          headerPadding,
+          {
+            backgroundColor: "rgba(10,4,20,0.55)",
+            borderBottomColor: NEON.glow.red + "40",
+          },
+        ]}
+      >
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t("voice.title")}</Text>
       </View>
 
@@ -184,7 +195,7 @@ export default function VoiceScreen() {
                     ? colors.accent
                     : state === "speaking"
                       ? colors.success
-                      : colors.surface,
+                      : "rgba(15,7,24,0.6)",
                 shadowColor: colors.accentGlow,
                 borderWidth: 2,
                 borderColor:
@@ -192,11 +203,18 @@ export default function VoiceScreen() {
                     ? colors.accent
                     : state === "speaking"
                       ? colors.success
-                      : colors.surfaceBorder + "20",
+                      : NEON.glow.red + "66",
                 transform: [{ scale: pulseAnim }],
               },
             ]}
-          />
+          >
+            <LinearGradient
+              colors={[...NEON.gradient.accent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.orbInner}
+            />
+          </Animated.View>
         </Pressable>
 
         <Text style={[styles.stateLabel, { color: config.color }]}>{config.label}</Text>
@@ -233,7 +251,7 @@ export default function VoiceScreen() {
         )}
 
         {state === "processing" && transcript && (
-          <View style={[styles.transcriptCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder + "14" }]}>
+          <View style={[styles.transcriptCard, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
             <Text style={[styles.transcriptLabel, { color: colors.textSecondary }]}>{t("voice.youSaid")}</Text>
             <Text style={[styles.transcriptText, { color: colors.textPrimary }]}>{transcript}</Text>
           </View>
@@ -254,7 +272,7 @@ export default function VoiceScreen() {
           </View>
         )}
       </View>
-    </View>
+    </NeonBackground>
   );
 }
 
@@ -263,6 +281,7 @@ const styles = StyleSheet.create({
   header: {
     paddingBottom: SPACING.lg,
     paddingHorizontal: SPACING.xl,
+    borderBottomWidth: 1,
   },
   title: {
     fontSize: TYPOGRAPHY.xxl,
@@ -283,6 +302,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 32,
     elevation: 12,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orbInner: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
   },
   stateLabel: {
     fontSize: TYPOGRAPHY.lg,
