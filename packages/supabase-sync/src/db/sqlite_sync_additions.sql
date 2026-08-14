@@ -22,6 +22,29 @@ ALTER TABLE messages ADD COLUMN deleted_at TEXT;
 -- Postgres) add one now — it becomes the real ordering key going forward:
 ALTER TABLE messages ADD COLUMN seq INTEGER;
 
+-- 3) Identity & workspaces (mirror of Supabase migration 002_identity_workspaces).
+--    The hybrid pull does `SELECT *` from Supabase and upserts every remote
+--    column locally — without these columns the pull would fail with
+--    "no such column". Additive only; safe to skip on older app schemas
+--    that don't write identity data yet (columns are nullable).
+
+ALTER TABLE conversations ADD COLUMN workspace_id TEXT;
+ALTER TABLE conversations ADD COLUMN user_id TEXT;
+ALTER TABLE conversations ADD COLUMN channel_id TEXT;
+ALTER TABLE conversations ADD COLUMN external_conversation_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_conversations_workspace ON conversations (workspace_id);
+
+ALTER TABLE messages ADD COLUMN workspace_id TEXT;
+ALTER TABLE messages ADD COLUMN user_id TEXT;
+ALTER TABLE messages ADD COLUMN type TEXT NOT NULL DEFAULT 'text';
+ALTER TABLE messages ADD COLUMN direction TEXT NOT NULL DEFAULT 'inbound';
+ALTER TABLE messages ADD COLUMN external_message_id TEXT;
+ALTER TABLE messages ADD COLUMN media_url TEXT;
+ALTER TABLE messages ADD COLUMN metadata TEXT;
+CREATE INDEX IF NOT EXISTS idx_messages_workspace ON messages (workspace_id);
+CREATE INDEX IF NOT EXISTS idx_messages_user ON messages (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_messages_external ON messages (external_message_id) WHERE external_message_id IS NOT NULL;
+
 -- 2) Outbox — every local write that must eventually reach Supabase gets
 --    queued here instead of calling the network directly. Classic outbox
 --    pattern: reliable even if the sync worker is offline or the app is

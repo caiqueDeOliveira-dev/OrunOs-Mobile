@@ -1,0 +1,17 @@
+# Orun OS — WhatsApp Baileys gateway
+#
+#   docker compose up -d --build
+#   docker compose logs -f whatsapp-baileys   (QR code na primeira vez)
+#
+# restart: unless-stopped → volta sozinho quando o Docker inicia.
+
+services:
+  whatsapp-baileys:
+    build: .
+    container_name: orun-whatsapp-baileys
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - AUTH_DIR=/data/auth_state
+    volumes:
+      - ./auth_state:/data/auth_state

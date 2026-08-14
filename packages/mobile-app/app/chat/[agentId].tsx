@@ -19,41 +19,49 @@ import { MessageBubble, ChatInput } from "../../src/components/chat";
 import { EmptyState, NeonBackground } from "../../src/components/ui";
 import { t } from "../../src/i18n";
 
-const PAGE_SIZE = 30;
-
 export default function AgentChatScreen() {
   const { colors } = useTheme();
   const { headerPadding, keyboardOffset } = useSafeArea();
   const { agentId } = useLocalSearchParams<{ agentId: string }>();
   const router = useRouter();
-  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const { messages, sending, loading, error, hasMore, send, loadMore: hookLoadMore } = useChat({ agentId });
+  const userScrolledUpRef = useRef(false);
 
+  // Auto-scroll to the newest message only when it actually changes (send or reply)
+  // and the user is at the bottom. Loading history prepends older messages without
+  // changing the newest id, so it never yanks the scroll position up/down.
+  const lastMessageIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
+    const lastId = messages.length > 0 ? messages[messages.length - 1].id : null;
+    if (lastId !== null && lastId !== lastMessageIdRef.current && !userScrolledUpRef.current) {
+      const t = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      }, 60);
+      lastMessageIdRef.current = lastId;
+      return () => clearTimeout(t);
     }
-  }, [messages.length]);
+    lastMessageIdRef.current = lastId;
+  }, [messages]);
 
-  const displayedMessages = messages.slice(-displayCount);
+  const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number }; layoutMeasurement: { height: number }; contentSize: { height: number } } }) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    userScrolledUpRef.current = distanceFromBottom > 120;
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore) return;
     Haptics.selectionAsync();
     setLoadingMore(true);
     try {
-      const beforeCount = messages.length;
       await hookLoadMore();
-      setDisplayCount((prev) => prev + (messages.length - beforeCount || PAGE_SIZE));
     } finally {
       setLoadingMore(false);
     }
-  }, [hasMore, loadingMore, hookLoadMore, messages.length]);
+  }, [hasMore, loadingMore, hookLoadMore]);
 
   const agentName = agentId
     ? agentId.charAt(0).toUpperCase() + agentId.slice(1)
@@ -72,7 +80,7 @@ export default function AgentChatScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: "transparent" }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={keyboardOffset}
     >
       <NeonBackground>
@@ -99,34 +107,38 @@ export default function AgentChatScreen() {
           </View>
           <View style={styles.backButton} />
         </View>
-      </NeonBackground>
 
-      <FlatList
-        ref={flatListRef}
-        data={displayedMessages}
-        keyExtractor={(m) => m.id}
-        style={styles.flatList}
-        contentContainerStyle={styles.messageList}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListHeaderComponent={
-          hasMore ? (
-            <Pressable
-              onPress={loadMore}
-              style={[styles.loadMoreButton, { borderColor: NEON.glow.red + "40" }]}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.loadMore")}
-            >
-              {loadingMore ? (
-                <ActivityIndicator color={colors.accentGlow} size="small" />
-              ) : (
-                <Text style={[styles.loadMoreText, { color: colors.accentGlow }]}>
-                  {t("common.loadMore")} ({messages.length - displayCount})
-                </Text>
-              )}
-            </Pressable>
-          ) : null
-        }
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(m) => m.id}
+          style={styles.flatList}
+          contentContainerStyle={styles.messageList}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          ListHeaderComponent={
+            hasMore ? (
+              <Pressable
+                onPress={loadMore}
+                style={[styles.loadMoreButton, { borderColor: NEON.glow.red + "40" }]}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.loadMore")}
+              >
+                {loadingMore ? (
+                  <ActivityIndicator color={colors.accentGlow} size="small" />
+                ) : (
+                  <Text style={[styles.loadMoreText, { color: colors.accentGlow }]}>
+                    {t("common.loadMore")}
+                  </Text>
+                )}
+              </Pressable>
+            ) : null
+          }
         ListEmptyComponent={
           <EmptyState
             title={t("chat.empty")}
@@ -143,6 +155,7 @@ export default function AgentChatScreen() {
       )}
 
       <ChatInput onSend={send} sending={sending} placeholder={t("chat.talkToAgent", { agentName })} />
+      </NeonBackground>
     </KeyboardAvoidingView>
   );
 }

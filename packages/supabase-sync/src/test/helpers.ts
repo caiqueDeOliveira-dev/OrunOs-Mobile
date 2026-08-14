@@ -9,9 +9,9 @@ import Database from "better-sqlite3";
 export function freshDb(): Database.Database {
   const db = new Database(":memory:");
   db.exec(`
-    CREATE TABLE conversations (id TEXT PRIMARY KEY, title TEXT, updated_at TEXT, deleted_at TEXT);
+    CREATE TABLE conversations (id TEXT PRIMARY KEY, title TEXT, agent_id TEXT, workspace_id TEXT, user_id TEXT, channel_id TEXT, external_conversation_id TEXT, updated_at TEXT, deleted_at TEXT);
     CREATE TABLE agents (id TEXT PRIMARY KEY, name TEXT, updated_at TEXT, deleted_at TEXT);
-    CREATE TABLE messages (id TEXT PRIMARY KEY, conversation_id TEXT, seq INTEGER, updated_at TEXT, deleted_at TEXT);
+    CREATE TABLE messages (id TEXT PRIMARY KEY, conversation_id TEXT, seq INTEGER, role TEXT, agent_id TEXT, content TEXT, workspace_id TEXT, user_id TEXT, type TEXT DEFAULT 'text', direction TEXT DEFAULT 'inbound', external_message_id TEXT, media_url TEXT, metadata TEXT, updated_at TEXT, deleted_at TEXT);
     CREATE TABLE usage_events (id TEXT PRIMARY KEY, updated_at TEXT, deleted_at TEXT);
     CREATE TABLE tts_usage (id TEXT PRIMARY KEY, updated_at TEXT, deleted_at TEXT);
     CREATE TABLE automations (id TEXT PRIMARY KEY, updated_at TEXT, deleted_at TEXT);

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, Switch, StyleSheet, Alert } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, Switch, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,6 +12,12 @@ import { setLocale, getLocale, t, type Locale } from "../../src/i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NeonBackground } from "../../src/components/ui";
 import type { ThemeName } from "../../src/theme/tokens";
+import {
+  isSpotifyConfigured,
+  isSpotifyConnected,
+  connectSpotify,
+  disconnectSpotify,
+} from "../../src/services/spotifyService";
 
 const THEMES: { name: ThemeName; label: string }[] = [
   { name: "neon", label: "Neon" },
@@ -40,6 +46,40 @@ export default function SettingsScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [currentLang, setCurrentLang] = useState<Locale>(getLocale());
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
+  const [spotifyBusy, setSpotifyBusy] = useState(false);
+
+  const refreshSpotify = useCallback(async () => {
+    const connected = await isSpotifyConnected().catch(() => false);
+    setSpotifyConnected(connected);
+  }, []);
+
+  useEffect(() => {
+    refreshSpotify();
+  }, [refreshSpotify]);
+
+  async function handleSpotifyConnect() {
+    if (spotifyBusy) return;
+    if (!isSpotifyConfigured()) {
+      Alert.alert("Spotify não configurado", "Adicione o EXPO_PUBLIC_SPOTIFY_CLIENT_ID no .env do app.");
+      return;
+    }
+    setSpotifyBusy(true);
+    try {
+      const ok = await connectSpotify();
+      await refreshSpotify();
+      if (!ok) {
+        Alert.alert("Spotify", "Login não concluído.");
+      }
+    } finally {
+      setSpotifyBusy(false);
+    }
+  }
+
+  async function handleSpotifyDisconnect() {
+    await disconnectSpotify();
+    await refreshSpotify();
+  }
 
   useEffect(() => {
     AsyncStorage.getItem(BIOMETRIC_KEY).then((v) => setBiometricEnabled(v === "true"));
@@ -206,6 +246,50 @@ export default function SettingsScreen() {
         </View>
 
         <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Integrações</Text>
+
+          <View style={styles.row}>
+            <View style={styles.integrationInfo}>
+              <View style={styles.rowInline}>
+                <Ionicons name="musical-notes" size={16} color="#1DB954" />
+                <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>Spotify</Text>
+              </View>
+              <Text style={[styles.version, { color: colors.textMuted }]}>
+                {!isSpotifyConfigured()
+                  ? "Não configurado (.env)"
+                  : spotifyConnected
+                    ? "Conectado — controlável por voz"
+                    : "Não conectado"}
+              </Text>
+            </View>
+            {spotifyBusy ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : spotifyConnected ? (
+              <Pressable onPress={handleSpotifyDisconnect} hitSlop={8}>
+                <Text style={{ color: colors.danger, fontSize: TYPOGRAPHY.sm, fontWeight: FONT_WEIGHT.medium }}>
+                  Desconectar
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[styles.spotifyButton, { borderColor: colors.accent + "66" }]}
+                onPress={handleSpotifyConnect}
+                hitSlop={8}
+              >
+                <Text style={{ color: colors.accent, fontSize: TYPOGRAPHY.sm, fontWeight: FONT_WEIGHT.medium }}>
+                  Conectar
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: NEON.glow.red + "30" }]} />
+          <Text style={[styles.version, { color: colors.textMuted }]}>
+            Exemplos: "Orun, liga o spotify", "pula a música", "toca lofi para estudar".
+          </Text>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.about")}</Text>
           <Text style={[styles.version, { color: colors.textMuted }]}>{t("settings.version", { version: "0.2.0" })}</Text>
         </View>
@@ -300,6 +384,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  rowInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  integrationInfo: {
+    flex: 1,
+    gap: SPACING.xs,
+    marginRight: SPACING.md,
+  },
+  spotifyButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
   },
   rowLabel: {
     fontSize: TYPOGRAPHY.md,

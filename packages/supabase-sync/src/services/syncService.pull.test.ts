@@ -129,4 +129,60 @@ describe("SyncService — pull", () => {
     expect(conversationCalls[0].since).toBe("1970-01-01T00:00:00.000Z");
     expect(conversationCalls[1].since).toBe(firstRow.updated_at);
   });
+
+  it("pulls identity/workspace columns on conversations without erroring", async () => {
+    const remoteRow = {
+      id: "c7",
+      title: "Workspace conv",
+      workspace_id: "ws-personal-1",
+      user_id: "u1",
+      channel_id: "wa-group-1",
+      external_conversation_id: "120363012345678901",
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+    };
+    const supabase = fakeSupabase({
+      onPull: (table) => (table === "conversations" ? { data: [remoteRow], error: null } : { data: [], error: null }),
+    });
+
+    await new SyncService(db, supabase as any, 1000).runOnce();
+
+    const row = db.prepare("SELECT * FROM conversations WHERE id = ?").get("c7") as any;
+    expect(row.workspace_id).toBe("ws-personal-1");
+    expect(row.user_id).toBe("u1");
+    expect(row.channel_id).toBe("wa-group-1");
+    expect(row.external_conversation_id).toBe("120363012345678901");
+  });
+
+  it("pulls message identity/type/direction/media columns and stores objects as JSON", async () => {
+    const remoteRow = {
+      id: "m7",
+      conversation_id: "c7",
+      seq: 1,
+      role: "user",
+      content: "Audio reply",
+      workspace_id: "ws-personal-1",
+      user_id: "u1",
+      type: "audio",
+      direction: "inbound",
+      external_message_id: "ABEG4jVQ0",
+      media_url: "https://cdn.example.com/a.ogg",
+      metadata: { durationSec: 3.2, mimeType: "audio/ogg" },
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+    };
+    const supabase = fakeSupabase({
+      onPull: (table) => (table === "messages" ? { data: [remoteRow], error: null } : { data: [], error: null }),
+    });
+
+    await new SyncService(db, supabase as any, 1000).runOnce();
+
+    const row = db.prepare("SELECT * FROM messages WHERE id = ?").get("m7") as any;
+    expect(row.type).toBe("audio");
+    expect(row.direction).toBe("inbound");
+    expect(row.external_message_id).toBe("ABEG4jVQ0");
+    expect(row.media_url).toBe("https://cdn.example.com/a.ogg");
+    expect(row.workspace_id).toBe("ws-personal-1");
+    expect(JSON.parse(row.metadata).durationSec).toBe(3.2);
+  });
 });

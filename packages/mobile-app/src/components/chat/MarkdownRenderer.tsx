@@ -247,7 +247,7 @@ export function MarkdownRenderer({ content, baseStyle }: MarkdownProps) {
       );
       i++;
     } else {
-      const inlineTokens: JSX.Element[] = [];
+      const inlineTokens: React.ReactElement[] = [];
       while (i < tokens.length && tokens[i].type !== "codeblock") {
         inlineTokens.push(
           <TokenRenderer key={`t-${i}`} token={tokens[i]} colors={colors} />

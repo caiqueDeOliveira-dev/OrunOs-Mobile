@@ -121,11 +121,16 @@ async function callAiRelay(
 /**
  * Fallback: calls the AI provider directly without the Edge Function.
  * Used when we don't have a user JWT for the ai-relay.
+ *
+ * Stores only the assistant reply (the caller already stored the user's
+ * message with direction/external ids) and marks it as `outbound` so the
+ * sender loop / mobile voice assistant can react to it.
  */
 async function callAiDirect(
   agentId: string,
   content: string,
   conversationId: string,
+  userSeq: number,
 ): Promise<string> {
   const { data: agent } = await supabase
     .from("agents")
@@ -148,27 +153,6 @@ async function callAiDirect(
   const envKey = PROVIDER_ENV[agent.default_provider];
   const apiKey = envKey ? process.env[envKey] : null;
   if (!apiKey) throw new Error(`${envKey} not set in environment`);
-
-  // Store user message
-  const now = new Date().toISOString();
-  const { data: seqRow } = await supabase
-    .from("messages")
-    .select("seq")
-    .eq("conversation_id", conversationId)
-    .order("seq", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const nextSeq = (seqRow?.seq ?? 0) + 1;
-
-  await supabase.from("messages").insert({
-    conversation_id: conversationId,
-    seq: nextSeq,
-    role: "user",
-    agent_id: agentId,
-    content,
-    created_at: now,
-    updated_at: now,
-  });
 
   // Call provider directly
   const ENDPOINTS: Record<string, string> = {
@@ -221,16 +205,19 @@ async function callAiDirect(
     reply = data.choices?.[0]?.message?.content ?? "";
   }
 
-  // Store assistant reply
+  // Store assistant reply (outbound — the gateway sends it right below, so
+  // the sender loop must skip it via metadata.wa_outbound)
   const replyNow = new Date().toISOString();
   await supabase.from("messages").insert({
     conversation_id: conversationId,
-    seq: nextSeq + 1,
+    seq: userSeq + 1,
     role: "assistant",
     agent_id: agentId,
     provider: agent.default_provider,
     model: agent.default_model,
     content: reply,
+    direction: "outbound",
+    metadata: { wa_outbound: true },
     created_at: replyNow,
     updated_at: replyNow,
   });
@@ -240,11 +227,63 @@ async function callAiDirect(
 
 // ─── Message handler ───────────────────────────────────────────────
 
+/** Next seq for a conversation (max seq + 1). */
+async function nextSeq(conversationId: string): Promise<number> {
+  const { data: seqRow } = await supabase
+    .from("messages")
+    .select("seq")
+    .eq("conversation_id", conversationId)
+    .order("seq", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (seqRow?.seq ?? 0) + 1;
+}
+
+/**
+ * Finds the WhatsApp conversation for a chat or creates it once, keyed by
+ * `external_conversation_id` so we don't spawn a new conversation per
+ * message.
+ */
+async function getOrCreateWhatsAppConversation(
+  chatJid: string,
+  isGroup: boolean,
+  preview: string,
+  route: { agentId: string; userId: string },
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("external_conversation_id", chatJid)
+    .eq("channel_id", "whatsapp")
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  const convTitle = isGroup
+    ? `WA Group: ${chatJid}`
+    : `WA: ${preview.slice(0, 50)}`;
+
+  const { data: conv } = await supabase
+    .from("conversations")
+    .insert({
+      title: convTitle,
+      agent_id: route.agentId,
+      user_id: route.userId,
+      channel_id: "whatsapp",
+      external_conversation_id: chatJid,
+    })
+    .select("id")
+    .single();
+
+  if (!conv) throw new Error("Failed to create conversation");
+  return conv.id;
+}
+
 async function handleMessage(sock: WASocket, msg: proto.IWebMessageInfo) {
   if (!msg.message || msg.key.fromMe) return;
 
   const chatJid = msg.key.remoteJid!;
-  const senderJid = msg.key.participant ?? msg.key.remoteJid!;
   const text =
     msg.message.conversation ??
     msg.message.extendedTextMessage?.text ??
@@ -252,10 +291,10 @@ async function handleMessage(sock: WASocket, msg: proto.IWebMessageInfo) {
 
   if (!text.trim()) return;
 
-  console.log(`[MSG] ${isJidGroup(chatJid) ? "GROUP" : "DM"} ${chatJid} from ${senderJid}: ${text.slice(0, 80)}`);
+  console.log(`[MSG] ${isJidGroup(chatJid) ? "GROUP" : "DM"} ${chatJid}: ${text.slice(0, 80)}`);
 
   // Route to agent
-  const route = await routeMessage(chatJid, senderJid, text);
+  const route = await routeMessage(chatJid, chatJid, text);
   if (!route) {
     await sock.sendMessage(chatJid, {
       text: "Nenhuma regra de roteamento configurada para este chat. Configure no app Orun OS.",
@@ -263,27 +302,42 @@ async function handleMessage(sock: WASocket, msg: proto.IWebMessageInfo) {
     return;
   }
 
-  // Create or find conversation
-  const convTitle = isJidGroup(chatJid)
-    ? `WA Group: ${chatJid}`
-    : `WA: ${text.slice(0, 50)}`;
-
-  const { data: conv } = await supabase
-    .from("conversations")
-    .insert({ title: convTitle, agent_id: route.agentId, user_id: route.userId })
-    .select("id")
-    .single();
-
-  if (!conv) {
+  // Create or find conversation (keyed by external_conversation_id)
+  let conversationId: string;
+  try {
+    conversationId = await getOrCreateWhatsAppConversation(
+      chatJid,
+      isJidGroup(chatJid) === true,
+      text,
+      route,
+    );
+  } catch (err) {
+    console.error("[CONV] Failed:", err);
     await sock.sendMessage(chatJid, { text: "Erro ao criar conversa." });
     return;
   }
+
+  // Store the inbound message with WhatsApp metadata
+  const now = new Date().toISOString();
+  const userSeq = await nextSeq(conversationId);
+  await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    seq: userSeq,
+    role: "user",
+    agent_id: route.agentId,
+    content: text,
+    direction: "inbound",
+    external_message_id: msg.key.id ?? null,
+    type: "text",
+    created_at: now,
+    updated_at: now,
+  });
 
   // Send "typing" indicator
   await sock.sendPresenceUpdate("composing", chatJid);
 
   try {
-    const reply = await callAiDirect(route.agentId, text, conv.id);
+    const reply = await callAiDirect(route.agentId, text, conversationId, userSeq);
     await sock.sendMessage(chatJid, { text: reply });
   } catch (err) {
     const errMsg = (err as Error).message;
@@ -355,6 +409,54 @@ async function main() {
       }
     }
   });
+
+  // ─── Sender loop (voice-reply relay) ─────────────────────────────
+  // Watches for assistant replies written to the DB (e.g. the mobile voice
+  // assistant answering on behalf of the user via ai-relay) and pushes them
+  // to the right WhatsApp chat. Messages already relayed by this gateway get
+  // an external_message_id, so they never loop back.
+  const senderChannel = supabase
+    .channel("wa-sender-loop")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: "role=eq.assistant,external_message_id=is.null",
+      },
+      async (payload) => {
+        const message = payload.new as Record<string, any>;
+        if (!message?.conversation_id || !message?.content) return;
+        if ((message.metadata as Record<string, any>)?.wa_outbound) return;
+
+        const { data: conv } = await supabase
+          .from("conversations")
+          .select("channel_id, external_conversation_id")
+          .eq("id", message.conversation_id)
+          .maybeSingle();
+
+        if (!conv || conv.channel_id !== "whatsapp" || !conv.external_conversation_id) return;
+
+        const chatJid = conv.external_conversation_id;
+        try {
+          await sock.sendPresenceUpdate("composing", chatJid);
+          const sent = await sock.sendMessage(chatJid, { text: message.content });
+          const sentId = sent?.key?.id ?? `unknown-${Date.now()}`;
+          await supabase
+            .from("messages")
+            .update({
+              external_message_id: sentId,
+              metadata: { ...(message.metadata ?? {}), wa_sent_at: new Date().toISOString() },
+            })
+            .eq("id", message.id);
+          console.log(`[SENT] ${chatJid}: ${String(message.content).slice(0, 80)}`);
+        } catch (err) {
+          console.error("[SEND ERROR]", err);
+        }
+      },
+    )
+    .subscribe();
 
   console.log("[INIT] WhatsApp Baileys Gateway iniciado");
   console.log(`[INIT] Supabase: ${SUPABASE_URL}`);

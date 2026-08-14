@@ -32,6 +32,7 @@ packages/whatsapp-baileys/auth_state/
 .DS_Store
 *.log
 npm-debug.log*
+/packages/mobile-app/expo-log.txt
 
 # Vitest/coverage
 coverage/

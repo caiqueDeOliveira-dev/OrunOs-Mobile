@@ -21,7 +21,6 @@ export default function TabsLayout() {
           height: 64 + tabBarPadding.paddingBottom,
           paddingTop: 6,
           ...tabBarPadding,
-          position: "absolute",
           elevation: 0,
           shadowColor: NEON.glow.red,
           shadowOpacity: 0.25,
