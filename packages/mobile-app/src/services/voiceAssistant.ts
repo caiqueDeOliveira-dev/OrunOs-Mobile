@@ -283,7 +283,15 @@ async function _captureCommand(mySession: number): Promise<string | null> {
     shouldDuckAndroid: true,
   });
 
-  let recording: Audio.Recording;
+  // VAD state declared BEFORE the recorder starts — expo-av fires the status
+  // callback synchronously inside createAsync (prepare + start), so using
+  // variables declared afterwards would throw in the temporal dead zone.
+  const startedAt = Date.now();
+  let spokenMs = 0;
+  let silentMs = 0;
+  let lastLevel: number | null = null;
+
+  let recording: Audio.Recording | null = null;
   let finishResolve: (() => void) | null = null;
 
   const finish = () => {
@@ -293,14 +301,11 @@ async function _captureCommand(mySession: number): Promise<string | null> {
 
   const onStatusUpdate = async (status: Audio.RecordingStatus) => {
     if (mySession !== session) {
-      await recording.stopAndUnloadAsync().catch(() => {});
+      if (recording) await recording.stopAndUnloadAsync().catch(() => {});
       finish();
       return;
     }
-    if (!status.isRecording) {
-      finish();
-      return;
-    }
+    if (!status.isRecording) return; // prepare-status — not a real stop
 
     const level = typeof status.metering === "number" ? status.metering : lastLevel;
     lastLevel = level;
@@ -320,7 +325,7 @@ async function _captureCommand(mySession: number): Promise<string | null> {
       (silentMs >= SILENCE_TO_STOP_MS && spokenMs >= MIN_SPOKEN_MS);
 
     if (shouldStop) {
-      await recording.stopAndUnloadAsync().catch(() => {});
+      if (recording) await recording.stopAndUnloadAsync().catch(() => {});
       finish();
     }
   };
@@ -338,11 +343,6 @@ async function _captureCommand(mySession: number): Promise<string | null> {
     return null;
   }
 
-  const startedAt = Date.now();
-  let spokenMs = 0;
-  let silentMs = 0;
-  let lastLevel: number | null = null;
-
   // Block until the recording stops (VAD decision, timeout, or session death).
   await new Promise<void>((resolve) => {
     finishResolve = resolve;
@@ -353,7 +353,7 @@ async function _captureCommand(mySession: number): Promise<string | null> {
     playsInSilentModeIOS: true,
   });
 
-  const uri = recording.getURI();
+  const uri = recording!.getURI();
   if (!uri) return null;
 
   const result = await transcribeAudio(uri);

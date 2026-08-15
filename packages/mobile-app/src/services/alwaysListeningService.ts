@@ -130,6 +130,16 @@ async function _capture(
     shouldDuckAndroid: true,
   });
 
+  // VAD state is initialized BEFORE the recorder starts: expo-av fires the
+  // status callback synchronously inside createAsync (prepare + start), so
+  // variables declared afterwards would be in the temporal dead zone.
+  const startedAt = Date.now();
+  let started = false;
+  let spokenMs = 0;
+  let silentMs = 0;
+  let idleMs = 0;
+  let lastLevel: number | null = null;
+
   let recording: Audio.Recording;
   try {
     const options: Audio.RecordingOptions = {
@@ -151,17 +161,19 @@ async function _capture(
     return;
   }
 
-  const startedAt = Date.now();
-  let spokenMs = 0;
-  let silentMs = 0;
-  let idleMs = 0;
-  let lastLevel: number | null = null;
-
   async function onStatus(status: Audio.RecordingStatus) {
-    if (!active || gen !== generation || !status.isRecording) {
+    if (!active || gen !== generation) {
       finishCapture(null);
       return;
     }
+    if (!status.isRecording) {
+      // Status emitted right after prepareToRecordAsync (before startAsync) is
+      // not a real stop — ignore it so the capture isn't finished prematurely
+      // while the recorder is still alive.
+      if (started) finishCapture(null);
+      return;
+    }
+    started = true;
 
     const level = typeof status.metering === "number" ? status.metering : lastLevel;
     lastLevel = level;
