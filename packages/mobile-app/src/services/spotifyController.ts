@@ -1,8 +1,13 @@
 // Orun OS — Spotify voice commands
 //
-// Plugs into the voice command router: "liga o spotify", "pausa a música",
-// "pula a música", "volta a música", "o que tá tocando", "toca <música>".
+// Plugs into the voice command router:
+//   "abre o spotify" / "liga o spotify"  → opens the native Spotify app (no OAuth needed)
+//   "conectar spotify"                    → OAuth connect flow
+//   "pausa a música", "pula a música",
+//   "volta a música", "o que tá tocando",
+//   "toca <música>"                       → Spotify Web API (needs Premium + connect)
 
+import * as Linking from "expo-linking";
 import { registerVoiceCommandHandler } from "./commandRouter";
 import {
   isSpotifyConfigured,
@@ -21,37 +26,90 @@ const NOT_CONFIGURED =
 const NOT_CONNECTED =
   "Você ainda não conectou o Spotify. Me diga: conectar spotify.";
 const NOT_PLAYING = "Nenhuma música tocando no momento.";
+const NO_ACTIVE_DEVICE =
+  "Não encontrei um dispositivo do Spotify ativo. Abre o Spotify no celular, dá play e tenta de novo.";
 
 function wantsConnect(n: string): boolean {
   return /conecta|conectar|conecte/.test(n) && n.includes("spotify");
 }
 
+/** "abre o spotify" / "liga o spotify" — opens the native app, no OAuth needed. */
+function wantsOpen(n: string): boolean {
+  return /(?:abre|abrir|inicia|iniciar|liga|ligar)\s+(?:o|a)?\s*spotify/.test(n);
+}
+
 function wantsPlay(n: string): boolean {
   return (
-    /ligar|liga|toca|toque|dar play|play|retomar|continue/.test(n) &&
-    (n.includes("spotify") || n.includes("música") || n.includes("musica") || n.includes("play"))
+    /(?:^|\s)(?:tocar|toca|toque|dar play|retomar|continue|continuar)(?=\s|$)/.test(n) ||
+    /liga a música|liga a musica/.test(n)
   );
 }
 
 function wantsPause(n: string): boolean {
   return (
-    /pausa|pausar|parar a música|para a música|stop|pausar a música/.test(n) &&
+    /pausa|pausar|parar a música|para a música|stop/.test(n) &&
     (n.includes("música") || n.includes("musica") || n.includes("spotify") || /^pausa/.test(n))
   );
 }
 
 function wantsNext(n: string): boolean {
-  return /pular|pula|próxima|proxima|avança|avanca|avançar|próximo|proximo/.test(n) &&
-    (n.includes("música") || n.includes("musica") || n.includes("faixa") || n.includes("spotify") || n.includes("pular"));
+  return (
+    /pular|pula|próxima|proxima|avança|avanca|avançar|próximo|proximo/.test(n) &&
+    (n.includes("música") || n.includes("musica") || n.includes("faixa") || n.includes("spotify") || n.includes("pular") || n.includes("pula"))
+  );
 }
 
 function wantsPrevious(n: string): boolean {
-  return /voltar|volta a música|anterior|música anterior|retroceder/.test(n) &&
-    (n.includes("música") || n.includes("musica") || n.includes("faixa") || n.includes("anterior"));
+  return (
+    /voltar|volta a música|anterior|música anterior|retroceder/.test(n) &&
+    (n.includes("música") || n.includes("musica") || n.includes("faixa") || n.includes("anterior"))
+  );
 }
 
 function wantsStatus(n: string): boolean {
   return /o que (tá|está|ta) tocando|que música|qual música|tocando agora|agora tá tocando/.test(n);
+}
+
+const isMusicIntent = (n: string): boolean =>
+  /spotify|música|musica|tocando|faixa|play|pular|pula|próxima|proxima|próximo|proximo|toca|toque|tocar|dar play|retomar|voltar|pausa|pausar|liga a música|liga a musica/.test(n);
+
+const PLAY_QUERY_RE = /(?:toca|toque|toque a|toque o|dar play em|play)\s+(.+)/;
+
+function extractSearchQuery(n: string): string | null {
+  const m = n.match(PLAY_QUERY_RE);
+  if (!m) return null;
+  const q = m[1]
+    .replace(/^(?:no|na|o|a|no spotify|na música|na musica|a música|a musica)\s+/i, "")
+    .trim();
+  if (!q || /^(música|musica|spotify|play)$/i.test(q)) return null;
+  return q;
+}
+
+async function openSpotifyApp(): Promise<boolean> {
+  try {
+    await Linking.openURL("spotify://");
+    return true;
+  } catch (err) {
+    console.warn("[spotify] open app failed:", (err as Error).message);
+    return false;
+  }
+}
+
+/** Runs a playback call; returns a spoken error message (or null on success). */
+async function tryPlayback(action: () => Promise<void>): Promise<string | null> {
+  try {
+    await action();
+    return null;
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("spotify_reauth_required")) {
+      return "A conexão com o Spotify expirou. Me diga: conectar spotify.";
+    }
+    if (/spotify_error:404|spotify_error:403|spotify_not_connected/.test(msg)) {
+      return NO_ACTIVE_DEVICE;
+    }
+    return "Não consegui fazer isso no Spotify agora. Tenta de novo.";
+  }
 }
 
 export function setupSpotifyVoiceCommands(): void {
@@ -66,18 +124,15 @@ export function setupSpotifyVoiceCommands(): void {
         : "Login do Spotify não foi concluído.";
     }
 
-    const musicIntent =
-      n.includes("spotify") ||
-      n.includes("música") ||
-      n.includes("musica") ||
-      n.includes("tocando") ||
-      n.includes("faixa") ||
-      n.includes("play") ||
-      n.includes("pular") ||
-      n.includes("próxima") ||
-      n.includes("proxima");
+    // Opening the native app works even before OAuth.
+    if (wantsOpen(n)) {
+      const ok = await openSpotifyApp();
+      return ok
+        ? "Abrindo o Spotify."
+        : "Não consegui abrir o Spotify. Confirma se o app está instalado?";
+    }
 
-    if (!musicIntent) return null;
+    if (!isMusicIntent(n)) return null;
 
     if (!isSpotifyConfigured()) return NOT_CONFIGURED;
     if (!(await isSpotifyConnected())) return NOT_CONNECTED;
@@ -90,35 +145,34 @@ export function setupSpotifyVoiceCommands(): void {
     }
 
     if (wantsPlay(n)) {
-      await spotifyPlay();
-      return "Tocando.";
+      const query = extractSearchQuery(n);
+      if (query) {
+        try {
+          const track = await playTrackByName(query);
+          return track
+            ? `Tocando ${track.name}, de ${track.artists}.`
+            : `Não encontrei a música ${query}.`;
+        } catch {
+          return "Não consegui tocar essa música no Spotify.";
+        }
+      }
+      const err = await tryPlayback(spotifyPlay);
+      return err ?? "Tocando.";
     }
 
     if (wantsPause(n)) {
-      await spotifyPause();
-      return "Música pausada.";
+      const err = await tryPlayback(spotifyPause);
+      return err ?? "Música pausada.";
     }
 
     if (wantsNext(n)) {
-      await spotifyNext();
-      return "Pulando para a próxima música.";
+      const err = await tryPlayback(spotifyNext);
+      return err ?? "Pulando para a próxima música.";
     }
 
     if (wantsPrevious(n)) {
-      await spotifyPrevious();
-      return "Voltando para a música anterior.";
-    }
-
-    // "toca <algo>" — treat the tail as a search query.
-    const playMatch = n.match(/(?:toca|toque|toque a|play)\s+(.+)/);
-    if (playMatch) {
-      const query = playMatch[1].replace(/^(no|na|no spotify|a música)\s+/i, "").trim();
-      if (query && !/^(spotify|play)$/.test(query)) {
-        const track = await playTrackByName(query);
-        return track
-          ? `Tocando ${track.name}, de ${track.artists}.`
-          : `Não encontrei a música ${query}.`;
-      }
+      const err = await tryPlayback(spotifyPrevious);
+      return err ?? "Voltando para a música anterior.";
     }
 
     return null;

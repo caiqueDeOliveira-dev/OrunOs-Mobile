@@ -285,7 +285,7 @@ export default function SettingsScreen() {
 
           <View style={[styles.divider, { backgroundColor: NEON.glow.red + "30" }]} />
           <Text style={[styles.version, { color: colors.textMuted }]}>
-            Exemplos: "Orun, liga o spotify", "pula a música", "toca lofi para estudar".
+            Exemplos: "Orun, abre o spotify", "pula a música", "toca lofi para estudar".
           </Text>
         </View>
 
