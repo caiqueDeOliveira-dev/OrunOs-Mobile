@@ -13,6 +13,7 @@ vi.mock("./voiceService", () => ({
   speak: vi.fn(async () => {}),
   stopSpeaking: vi.fn(async () => {}),
   transcribeAudio: vi.fn(async () => null),
+  VOICE_RECORDING_OPTIONS: {},
 }));
 
 vi.mock("./commandRouter", () => ({
@@ -40,7 +41,12 @@ describe("extractOrunCommand", () => {
   it.each([
     ["orun, toca lofi", "toca lofi"],
     ["ok orun toca lofi", "toca lofi"],
-    ["oi orun, que horas são?", "que horas são?"],
+    ["okay orun, toca lofi", "toca lofi"],
+    ["ok, orun pausa a música", "pausa a música"],
+    ["hey orun, que horas são?", "que horas são?"],
+    ["ei orun, abre o spotify", "abre o spotify"],
+    ["orum, pula a música", "pula a música"],
+    ["Oi orun, que horas são?", "que horas são?"],
     ["Orun o que tá tocando?", "o que tá tocando?"],
     ["oran, pausa a música", "pausa a música"],
     ["oron, pula a música", "pula a música"],
@@ -48,6 +54,7 @@ describe("extractOrunCommand", () => {
     ["ok orun", ""],
     ["toca lofi", null],
     ["o orun é bonito", null],
+    ["oram, não era isso", null],
   ])("extractOrunCommand(%s) → %s", (input, expected) => {
     expect(extractOrunCommand(input)).toBe(expected);
   });

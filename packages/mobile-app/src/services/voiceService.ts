@@ -17,6 +17,40 @@ export interface TTSOptions {
   voice?: string;
 }
 
+// ─── Recording preset ─────────────────────────────────────────────
+
+/**
+ * Speech-optimized recording preset (mono 16kHz, low bitrate) used for STT
+ * captures. Keeps files tiny so even a 15s utterance stays well under the
+ * ai-relay 256KB body limit (HIGH_QUALITY at 128kbps could exceed it).
+ */
+export const VOICE_RECORDING_OPTIONS: Audio.RecordingOptions = {
+  isMeteringEnabled: true,
+  android: {
+    extension: ".m4a",
+    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+    audioEncoder: Audio.AndroidAudioEncoder.AAC,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 32000,
+  },
+  ios: {
+    extension: ".m4a",
+    outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+    audioQuality: Audio.IOSAudioQuality.MEDIUM,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 32000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: "audio/webm",
+    bitsPerSecond: 32000,
+  },
+};
+
 // ─── Speech-to-Text ──────────────────────────────────────────────
 
 let activeRecording: Audio.Recording | null = null;
@@ -63,9 +97,7 @@ export async function startRecording(): Promise<Audio.Recording> {
     playsInSilentModeIOS: true,
   });
 
-  const recording = await createRecordingWithRetry(
-    Audio.RecordingOptionsPresets.HIGH_QUALITY
-  );
+  const recording = await createRecordingWithRetry(VOICE_RECORDING_OPTIONS);
   activeRecording = recording;
   return recording;
 }
@@ -90,9 +122,13 @@ export async function stopRecording(): Promise<{ uri: string; duration: number }
 /**
  * Transcribe audio by sending it to the ai-relay Edge Function.
  * The edge function handles the actual STT call to the configured provider.
- * Falls back to returning null if transcription is not available.
+ * Returns null when no text was produced. Real failures (network/function
+ * errors) are surfaced through `onError` so the caller can show feedback.
  */
-export async function transcribeAudio(audioUri: string): Promise<TranscriptResult | null> {
+export async function transcribeAudio(
+  audioUri: string,
+  onError?: (message: string) => void
+): Promise<TranscriptResult | null> {
   try {
     const file = new FileSystem.File(audioUri);
     const arrayBuffer = await file.arrayBuffer();
@@ -113,6 +149,7 @@ export async function transcribeAudio(audioUri: string): Promise<TranscriptResul
 
     if (error) {
       console.warn("[voice] Transcription not available:", error.message);
+      onError?.(`Falha ao transcrever: ${error.message}`);
       return null;
     }
 
@@ -124,6 +161,7 @@ export async function transcribeAudio(audioUri: string): Promise<TranscriptResul
     return null;
   } catch (err) {
     console.warn("[voice] Transcription failed:", err);
+    onError?.("Falha ao transcrever: " + ((err as Error).message ?? "erro de áudio"));
     return null;
   }
 }

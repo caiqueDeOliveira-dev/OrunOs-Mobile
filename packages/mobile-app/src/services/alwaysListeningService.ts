@@ -14,7 +14,7 @@
 // it afterwards.
 
 import { Audio } from "expo-av";
-import { transcribeAudio, createRecordingWithRetry } from "./voiceService";
+import { transcribeAudio, createRecordingWithRetry, VOICE_RECORDING_OPTIONS } from "./voiceService";
 
 // ─── VAD tuning ─────────────────────────────────────────────────────
 const SPEECH_THRESHOLD_DB = -42;
@@ -143,7 +143,7 @@ async function _capture(
   let recording: Audio.Recording;
   try {
     const options: Audio.RecordingOptions = {
-      ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      ...VOICE_RECORDING_OPTIONS,
       isMeteringEnabled: true,
     };
     recording = await createRecordingWithRetry(options, onStatus, 250);
@@ -213,7 +213,7 @@ async function _capture(
 
     let text: string | null = null;
     try {
-      const result = await transcribeAudio(uri);
+      const result = await transcribeAudio(uri, (msg) => onError?.(msg));
       text = result?.text ?? null;
     } catch (err) {
       onError?.(`Falha ao transcrever: ${(err as Error).message}`);

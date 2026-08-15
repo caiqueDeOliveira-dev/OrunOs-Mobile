@@ -10,7 +10,7 @@
 // while "capturing". Everything else is orchestrated here.
 
 import { Audio } from "expo-av";
-import { speak, stopSpeaking, transcribeAudio, createRecordingWithRetry } from "./voiceService";
+import { speak, stopSpeaking, transcribeAudio, createRecordingWithRetry, VOICE_RECORDING_OPTIONS } from "./voiceService";
 import { executeVoiceCommand } from "./commandRouter";
 import {
   initAlwaysListening,
@@ -47,8 +47,10 @@ const GREETING = "O que o Sr precisa hoje, Caique?";
 // Phrases that activate the assistant — phonetic variants of "orun" as the
 // STT often hears them. Returns the command part, or null if the phrase is
 // not addressed to Orun (empty string means "Orun" alone → greet & capture).
+// Prefix words accept punctuation after them ("ok, orun") and common
+// transcriptions of "ok" ("okay"/"okei") plus hey/ei/ô/oh.
 const ORUN_PREFIX_RE =
-  /^\s*(?:ok\s+|oi\s+)?(?:orun|órun|óron|oran|oron|ourun|aron|eron|órson)[\s,.:;!?-]*(.*)$/i;
+  /^\s*(?:(?:ok|okay|okei|oi|hey|ei|ô|oh)[\s,.:;!?-]+)?(?:orun|órun|óron|oran|oron|ourun|orum|orún|aron|eron|órson)[\s,.:;!?-]*(.*)$/i;
 
 export function extractOrunCommand(text: string): string | null {
   const m = text.trim().match(ORUN_PREFIX_RE);
@@ -332,7 +334,7 @@ async function _captureCommand(mySession: number): Promise<string | null> {
 
   try {
     const options: Audio.RecordingOptions = {
-      ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      ...VOICE_RECORDING_OPTIONS,
       isMeteringEnabled: true,
     };
 
@@ -356,6 +358,9 @@ async function _captureCommand(mySession: number): Promise<string | null> {
   const uri = recording!.getURI();
   if (!uri) return null;
 
-  const result = await transcribeAudio(uri);
+  const result = await transcribeAudio(uri, (msg) => {
+    error = msg;
+    emit();
+  });
   return result?.text ?? null;
 }
