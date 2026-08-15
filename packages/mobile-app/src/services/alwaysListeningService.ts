@@ -14,7 +14,7 @@
 // it afterwards.
 
 import { Audio } from "expo-av";
-import { transcribeAudio } from "./voiceService";
+import { transcribeAudio, createRecordingWithRetry } from "./voiceService";
 
 // ─── VAD tuning ─────────────────────────────────────────────────────
 const SPEECH_THRESHOLD_DB = -42;
@@ -31,6 +31,7 @@ let active = false;
 let generation = 0; // invalidates stale capture loops
 let recordingRef: Audio.Recording | null = null;
 let finishResolve: ((text: string | null) => void) | null = null;
+let pendingCapture: Promise<void> | null = null; // in-flight _capture, awaited on stop
 let onUtterance: UtteranceHandler | null = null;
 let onError: ErrorHandler | null = null;
 
@@ -63,6 +64,11 @@ export async function stopListening(): Promise<void> {
   generation += 1;
   active = false;
   await stopCurrentRecording();
+  // Wait for the in-flight capture to fully release the native recorder, so a
+  // later startListening / capture never races with an unloaded one.
+  const p = pendingCapture;
+  pendingCapture = null;
+  if (p) await p;
 }
 
 export function releaseAlwaysListening(): void {
@@ -74,7 +80,7 @@ export function releaseAlwaysListening(): void {
 
 async function runLoop(gen: number): Promise<void> {
   while (active && gen === generation) {
-    const text = await captureUtterance();
+    const text = await captureUtterance(gen);
     if (!active || gen !== generation) break;
     if (text && onUtterance) {
       try {
@@ -106,15 +112,18 @@ async function stopCurrentRecording(): Promise<void> {
 }
 
 /** Records one utterance (speech + trailing silence) and transcribes it. */
-async function captureUtterance(): Promise<string | null> {
+async function captureUtterance(gen: number): Promise<string | null> {
   if (finishResolve) return null;
   return await new Promise<string | null>((resolve) => {
     finishResolve = resolve;
-    void _capture(resolve);
+    pendingCapture = _capture(resolve, gen);
   });
 }
 
-async function _capture(resolve: (text: string | null) => void): Promise<void> {
+async function _capture(
+  resolve: (text: string | null) => void,
+  gen: number
+): Promise<void> {
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: true,
     playsInSilentModeIOS: true,
@@ -127,8 +136,14 @@ async function _capture(resolve: (text: string | null) => void): Promise<void> {
       ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
       isMeteringEnabled: true,
     };
-    const created = await Audio.Recording.createAsync(options, onStatus, 250);
-    recording = created.recording;
+    recording = await createRecordingWithRetry(options, onStatus, 250);
+    if (gen !== generation || !active) {
+      // A stop happened while the recorder was being prepared — release it
+      // right away so a later start/capture can record again.
+      await recording.stopAndUnloadAsync().catch(() => {});
+      finishCapture(null);
+      return;
+    }
     recordingRef = recording;
   } catch (err) {
     onError?.(`Não consegui abrir o microfone: ${(err as Error).message}`);
@@ -143,7 +158,7 @@ async function _capture(resolve: (text: string | null) => void): Promise<void> {
   let lastLevel: number | null = null;
 
   async function onStatus(status: Audio.RecordingStatus) {
-    if (!active || !status.isRecording) {
+    if (!active || gen !== generation || !status.isRecording) {
       finishCapture(null);
       return;
     }

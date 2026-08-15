@@ -15,6 +15,7 @@ import {
   stopSpeaking,
 } from "../../src/services/voiceService";
 import { sendVoiceMessage } from "../../src/services/chatService";
+import { getAssistantSnapshot, stopAssistant } from "../../src/services/voiceAssistant";
 import { NeonBackground } from "../../src/components/ui";
 
 type VoiceState = "idle" | "recording" | "processing" | "transcribing" | "speaking" | "error";
@@ -75,6 +76,11 @@ export default function VoiceScreen() {
     }
 
     try {
+      // The always-listening assistant owns the mic; stop it before recording
+      // manually so expo-av never has two Recordings prepared at once.
+      if (getAssistantSnapshot().state !== "off") {
+        await stopAssistant();
+      }
       await startRecording();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setState("recording");

@@ -26,13 +26,44 @@ export async function requestMicPermission(): Promise<boolean> {
   return perm.granted;
 }
 
+/**
+ * expo-av only allows a single Recording prepared at a time (module-level
+ * flag). Any leftover/racing recorder makes createAsync throw; retry briefly
+ * before giving up so voice flows never break on transient conflicts.
+ */
+export async function createRecordingWithRetry(
+  options: Audio.RecordingOptions,
+  onStatusUpdate?: (status: Audio.RecordingStatus) => void,
+  progressUpdateIntervalMillis = 250
+): Promise<Audio.Recording> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { recording } = await Audio.Recording.createAsync(
+        options,
+        onStatusUpdate,
+        progressUpdateIntervalMillis
+      );
+      return recording;
+    } catch (err) {
+      const conflict =
+        /prepared at a given time|already prepared/i.test((err as Error).message);
+      if (conflict && attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Não consegui iniciar a gravação de áudio.");
+}
+
 export async function startRecording(): Promise<Audio.Recording> {
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: true,
     playsInSilentModeIOS: true,
   });
 
-  const { recording } = await Audio.Recording.createAsync(
+  const recording = await createRecordingWithRetry(
     Audio.RecordingOptionsPresets.HIGH_QUALITY
   );
   activeRecording = recording;

@@ -10,7 +10,7 @@
 // while "capturing". Everything else is orchestrated here.
 
 import { Audio } from "expo-av";
-import { speak, stopSpeaking, transcribeAudio } from "./voiceService";
+import { speak, stopSpeaking, transcribeAudio, createRecordingWithRetry } from "./voiceService";
 import { executeVoiceCommand } from "./commandRouter";
 import {
   initAlwaysListening,
@@ -331,8 +331,7 @@ async function _captureCommand(mySession: number): Promise<string | null> {
       isMeteringEnabled: true,
     };
 
-    const created = await Audio.Recording.createAsync(options, onStatusUpdate, 250);
-    recording = created.recording;
+    recording = await createRecordingWithRetry(options, onStatusUpdate, 250);
   } catch (err) {
     error = `Não consegui abrir o microfone: ${(err as Error).message}`;
     emit();

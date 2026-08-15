@@ -12,6 +12,7 @@
 // Playback control requires a Spotify Premium account.
 
 import * as AuthSession from "expo-auth-session";
+import { exchangeCodeAsync } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -91,6 +92,8 @@ function newAuthRequest(): AuthSession.AuthRequest {
 
 /**
  * Opens the Spotify login flow and stores the tokens.
+ * Uses Authorization Code + PKCE: the authorize step returns a `code` that
+ * must be exchanged for access/refresh tokens before they can be stored.
  * Returns true when the user finished the flow with a token.
  */
 export async function connectSpotify(): Promise<boolean> {
@@ -101,16 +104,31 @@ export async function connectSpotify(): Promise<boolean> {
 
   if (result.type !== "success") return false;
 
-  const accessToken = result.params.access_token;
-  const refreshToken = result.params.refresh_token ?? null;
-  const expiresIn = Number(result.params.expires_in ?? 3600);
+  const code = result.params.code;
+  if (!code) return false;
 
-  if (!accessToken) return false;
+  let tokenResponse: AuthSession.TokenResponse;
+  try {
+    tokenResponse = await exchangeCodeAsync(
+      {
+        clientId: CLIENT_ID,
+        code,
+        redirectUri: redirectUri(),
+        extraParams: request.codeVerifier
+          ? { code_verifier: request.codeVerifier }
+          : undefined,
+      },
+      { tokenEndpoint: TOKEN_ENDPOINT }
+    );
+  } catch (err) {
+    console.warn("[spotify] Token exchange failed:", err);
+    return false;
+  }
 
   await saveTokens({
-    accessToken,
-    refreshToken,
-    expiresAt: Date.now() + expiresIn * 1000,
+    accessToken: tokenResponse.accessToken,
+    refreshToken: tokenResponse.refreshToken ?? null,
+    expiresAt: Date.now() + (tokenResponse.expiresIn ?? 3600) * 1000,
     connectedAt: new Date().toISOString(),
   });
 
