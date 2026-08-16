@@ -45,17 +45,34 @@ type Listener = (snapshot: AssistantSnapshot) => void;
 const GREETING = "O que o Sr precisa hoje, Caique?";
 
 // Phrases that activate the assistant — phonetic variants of "orun" as the
-// STT often hears them. Returns the command part, or null if the phrase is
-// not addressed to Orun (empty string means "Orun" alone → greet & capture).
-// Prefix words accept punctuation after them ("ok, orun") and common
-// transcriptions of "ok" ("okay"/"okei") plus hey/ei/ô/oh.
-const ORUN_PREFIX_RE =
-  /^\s*(?:(?:ok|okay|okei|oi|hey|ei|ô|oh)[\s,.:;!?-]+)?(?:orun|órun|óron|oran|oron|ourun|orum|orún|aron|eron|órson)[\s,.:;!?-]*(.*)$/i;
+// STT often hears them (Groq transcribes this user's "ok orun" as "oram" or
+// "ouru"). Returns the command part, or null if the phrase is not addressed
+// to Orun (empty string means "Orun" alone → greet & capture).
+//
+// Anti-false-positive (desktop lesson v0.6.18): unambiguous variants
+// (orun/ourun/orum/ouru/...) trigger alone; ambiguous ones ("oram" is how
+// "foram" is also transcribed, "oran", "oron", ...) only count when preceded
+// by a strong prefix like "ok"/"oi"/"hey" so everyday speech doesn't wake it.
+const STRONG_PREFIX_RE = /^(?:ok|okay|okei|oi|hey|ei|ô|oh)[\s,.:;!?-]+/i;
+const ORUN_STRONG_RE =
+  /^(?:orun|órun|óron|ourun|orún|orum|ouru)[\s,.:;!?-]*(.*)$/i;
+const ORUN_ANY_RE =
+  /^(?:orun|órun|óron|ourun|orún|orum|ouru|oram|oran|oron|aron|eron|órson|orim|oreu|oriã|orã)[\s,.:;!?-]*(.*)$/i;
 
 export function extractOrunCommand(text: string): string | null {
-  const m = text.trim().match(ORUN_PREFIX_RE);
-  if (!m) return null;
-  return m[1].trim();
+  const t = text.trim();
+
+  const direct = t.match(ORUN_STRONG_RE);
+  if (direct) return direct[1].trim();
+
+  // Ambiguous variants only count after a strong prefix ("ok oram" ✓,
+  // "foram embora" ✗).
+  const rest = t.replace(STRONG_PREFIX_RE, "");
+  if (rest !== t) {
+    const m = rest.match(ORUN_ANY_RE);
+    if (m) return m[1].trim();
+  }
+  return null;
 }
 
 // ─── Capture tuning ─────────────────────────────────────────────────

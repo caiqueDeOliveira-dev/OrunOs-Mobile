@@ -46,15 +46,20 @@ describe("extractOrunCommand", () => {
     ["hey orun, que horas são?", "que horas são?"],
     ["ei orun, abre o spotify", "abre o spotify"],
     ["orum, pula a música", "pula a música"],
+    ["ouru, o que tá tocando?", "o que tá tocando?"],
+    ["ok oram, toca lofi", "toca lofi"],
+    ["Oi oram, que horas são?", "que horas são?"],
     ["Oi orun, que horas são?", "que horas são?"],
     ["Orun o que tá tocando?", "o que tá tocando?"],
-    ["oran, pausa a música", "pausa a música"],
-    ["oron, pula a música", "pula a música"],
+    ["ok oran, pausa a música", "pausa a música"],
+    ["hey oron, pula a música", "pula a música"],
     ["orun", ""],
     ["ok orun", ""],
     ["toca lofi", null],
     ["o orun é bonito", null],
     ["oram, não era isso", null],
+    ["foram, embora daqui", null],
+    ["foram ótimos", null],
   ])("extractOrunCommand(%s) → %s", (input, expected) => {
     expect(extractOrunCommand(input)).toBe(expected);
   });

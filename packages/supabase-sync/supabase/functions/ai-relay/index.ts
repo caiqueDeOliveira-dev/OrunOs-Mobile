@@ -77,6 +77,10 @@ async function transcribeAudio(audioBase64: string, mimeType: string): Promise<s
   formData.append("file", blob, `audio.${ext}`);
   formData.append("model", "whisper-large-v3");
   formData.append("language", "pt");
+  formData.append(
+    "prompt",
+    "O assistente se chama Orun. Ok Orun. Hey Orun. Comandos de voz: Spotify, música, WhatsApp, Telegram, hora, lembrete, navegação."
+  );
 
   const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
     method: "POST",
