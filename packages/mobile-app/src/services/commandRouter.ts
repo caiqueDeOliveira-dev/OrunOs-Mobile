@@ -11,13 +11,24 @@
 
 import { router } from "expo-router";
 import { sendVoiceMessage } from "./chatService";
+import { appLauncherHandler } from "./appLauncherController";
+import { reminderHandler } from "./reminderController";
+import { phoneHandler } from "./phoneController";
+import { systemInfoHandler } from "./systemController";
+import { settingsHandler } from "./settingsController";
 
 export interface VoiceCommandHandler {
   /** Returns a spoken reply, or null if this handler doesn't own the command. */
   (text: string): Promise<string | null> | string | null;
 }
 
-const handlers: VoiceCommandHandler[] = [];
+const handlers: VoiceCommandHandler[] = [
+  appLauncherHandler,
+  reminderHandler,
+  phoneHandler,
+  systemInfoHandler,
+  settingsHandler,
+];
 
 export function registerVoiceCommandHandler(handler: VoiceCommandHandler): () => void {
   handlers.push(handler);
@@ -77,17 +88,6 @@ async function handleSystem(text: string): Promise<string | null> {
 
   if (normalized.includes("cancelar") || normalized === "para" || normalized === "parar" || normalized === "sai") {
     return "OK, interrompendo.";
-  }
-
-  if (normalized.includes("que horas") || normalized.includes("que horas sao") || normalized.includes("hora e") || normalized.includes("horas sao")) {
-    const now = new Date();
-    const hh = now.getHours();
-    const mm = now.getMinutes().toString().padStart(2, "0");
-    return `Agora são ${hh} e ${mm}.`;
-  }
-
-  if (normalized.includes("que dia") || normalized.includes("dia e hoje") || normalized.includes("que data")) {
-    return `Hoje é ${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}.`;
   }
 
   return null;

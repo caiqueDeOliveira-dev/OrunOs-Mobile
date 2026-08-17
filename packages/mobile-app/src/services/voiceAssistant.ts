@@ -43,6 +43,15 @@ export interface AssistantSnapshot {
 type Listener = (snapshot: AssistantSnapshot) => void;
 
 const GREETING = "O que o Sr precisa hoje, Caique?";
+const FAREWELL = "Até mais! Estou aqui quando precisar.";
+
+// ─── End-phrase detection (conversational mode) ──────────────────────
+const END_PHRASE_RE =
+  /\b(?:obrigad[oa]|valeu|pode dormir|pode parar|encerrar|até mais|tchau|flw|falou|até logo|nos vemos|pode desligar)\b/i;
+
+function isEndCommand(text: string): boolean {
+  return END_PHRASE_RE.test(text.trim());
+}
 
 // Phrases that activate the assistant — phonetic variants of "orun" as the
 // STT often hears them (Groq transcribes this user's "ok orun" as "oram" or
@@ -246,37 +255,51 @@ async function _greetAndCapture(mySession: number) {
   reply = null;
   error = null;
 
-  // Greeting first, so the user knows the assistant is awake.
   setState("greeting");
   await speak(GREETING, { language: "pt-BR", rate: 1.0 });
   if (mySession !== session) return;
 
-  // Capture the spoken command with silence detection.
-  setState("capturing");
-  const text = await _captureCommand(mySession);
-  if (mySession !== session) return;
+  // ─── Conversational loop ──────────────────────────────────────────
+  // After executing a command, capture the next one immediately so the
+  // user doesn't have to say "ok orun" again. The loop ends when:
+  //   • the VAD times out (20 s of silence),
+  //   • the user says an end-phrase ("obrigado", "pode dormir"…), or
+  //   • the session is invalidated (wake word, manual wake, stop).
+  try {
+    while (mySession === session) {
+      setState("capturing");
+      const text = await _captureCommand(mySession);
+      if (mySession !== session) return;
 
-  if (!text) {
-    await _resumeListening();
-    return;
+      if (!text) break; // VAD timeout → end session
+
+      if (isEndCommand(text)) {
+        setState("speaking");
+        await speak(FAREWELL, { language: "pt-BR", rate: 1.0 });
+        if (mySession !== session) return;
+        break;
+      }
+
+      transcript = text;
+      setState("transcribing");
+      setState("thinking");
+
+      const result = await executeVoiceCommand(text);
+      if (mySession !== session) return;
+
+      reply = result.reply;
+      if (result.reply === "OK, interrompendo.") break;
+
+      setState("speaking");
+      await speak(result.reply, { language: "pt-BR", rate: 1.0 });
+      if (mySession !== session) return;
+
+      // Loop back → capture next command
+    }
+  } catch (err) {
+    error = `Erro: ${(err as Error).message}`;
+    emit();
   }
-
-  transcript = text;
-  setState("transcribing");
-  setState("thinking");
-
-  const result = await executeVoiceCommand(text);
-  if (mySession !== session) return;
-
-  reply = result.reply;
-  if (result.reply === "OK, interrompendo.") {
-    await _resumeListening();
-    return;
-  }
-
-  setState("speaking");
-  await speak(result.reply, { language: "pt-BR", rate: 1.0 });
-  if (mySession !== session) return;
 
   await _resumeListening();
 }

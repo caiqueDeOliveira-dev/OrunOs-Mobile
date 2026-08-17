@@ -6,6 +6,21 @@ vi.mock("expo-router", () => ({
   router: { push: (...args: any[]) => pushMock(...args) },
 }));
 
+vi.mock("expo-linking", () => ({
+  default: { openURL: vi.fn(async () => true) },
+  openURL: vi.fn(async () => true),
+}));
+
+vi.mock("expo-notifications", () => ({
+  setNotificationHandler: vi.fn(),
+  scheduleNotificationAsync: vi.fn(async () => "notif-id"),
+}));
+
+vi.mock("react-native", async () => {
+  const actual = await vi.importActual("react-native");
+  return { ...actual, Platform: { OS: "android", select: (o: any) => o.android ?? o.default } };
+});
+
 vi.mock("./chatService", () => ({
   sendVoiceMessage: vi.fn(async (agentId: string, content: string) => ({
     conversationId: "conv-1",
@@ -21,7 +36,7 @@ describe("executeVoiceCommand", () => {
   it("answers the time", async () => {
     const res = await executeVoiceCommand("que horas são?");
     expect(res.handled).toBe(true);
-    expect(res.reply).toMatch(/Agora são \d+/);
+    expect(res.reply).toMatch(/São \d+/);
   });
 
   it("answers the date", async () => {

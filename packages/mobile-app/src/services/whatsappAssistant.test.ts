@@ -10,6 +10,21 @@ vi.mock("expo-router", () => ({
   router: { push: vi.fn(), back: vi.fn() },
 }));
 
+vi.mock("expo-linking", () => ({
+  default: { openURL: vi.fn(async () => true) },
+  openURL: vi.fn(async () => true),
+}));
+
+vi.mock("expo-notifications", () => ({
+  setNotificationHandler: vi.fn(),
+  scheduleNotificationAsync: vi.fn(async () => "notif-id"),
+}));
+
+vi.mock("react-native", async () => {
+  const actual = await vi.importActual("react-native");
+  return { ...actual, Platform: { OS: "android", select: (o: any) => o.android ?? o.default } };
+});
+
 vi.mock("./voiceAssistant", () => ({
   announceExternally: vi.fn(async () => true),
 }));
