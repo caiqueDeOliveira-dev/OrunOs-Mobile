@@ -67,6 +67,7 @@ const config: ExpoConfig = {
       },
     ],
     "expo-background-fetch",
+    "./modules/voice-tile/plugin",
   ],
   experiments: {
     typedRoutes: true,

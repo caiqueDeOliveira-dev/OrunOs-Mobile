@@ -6,8 +6,8 @@
   "description": "Orun OS Mobile — Expo Router app. Talks directly to Supabase + ai-relay Edge Function, works fully independent of the desktop app.",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
