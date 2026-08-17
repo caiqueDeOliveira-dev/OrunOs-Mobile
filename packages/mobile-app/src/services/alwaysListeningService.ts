@@ -1,37 +1,29 @@
-// Orun OS — Always-listening VAD service
+// Orun OS — Always-listening VAD service (time-based)
 //
-// Replaces the Picovoice Porcupine wake word (Picovoice discontinued its free
-// tier on 2026-06-30; no free AccessKeys anymore).
+// Records short fixed-duration windows and transcribes each one via
+// Groq Whisper. The text is handed to the voice assistant which only
+// acts when the phrase starts with "orun".
 //
-// How it works: while active, the microphone records continuously. An
-// energy-based VAD (audio metering) detects when the user starts speaking;
-// after a short silence the utterance is transcribed via ai-relay (Groq
-// Whisper — free, already configured) and handed to the voice assistant,
-// which only acts when the phrase starts with "orun".
-//
-// The mic is owned by this module while running; the voice assistant stops
-// it before speaking (so its own replies are never transcribed) and restarts
-// it afterwards.
+// This approach works reliably on ALL Android devices (Xiaomi, Samsung,
+// Pixel...) because it doesn't depend on expo-av metering which can be
+// null or inaccurate on some devices.
 
 import { Audio } from "expo-av";
 import { transcribeAudio, createRecordingWithRetry, VOICE_RECORDING_OPTIONS } from "./voiceService";
 
-// ─── VAD tuning ─────────────────────────────────────────────────────
-const SPEECH_THRESHOLD_DB = -50;
-const SILENCE_TO_STOP_MS = 1_200;
-const MIN_SPOKEN_MS = 400;
-const MAX_UTTERANCE_MS = 15_000; // hard cap per utterance
-const IDLE_RESET_MS = 8_000; // long silence → drop capture (no speech yet)
+// ─── Config ─────────────────────────────────────────────────────
+const RECORD_MS = 3_000;    // record 3 seconds per window
+const PAUSE_MS = 300;       // brief pause between windows
 const MIN_TEXT_LEN = 2;
 
 type UtteranceHandler = (text: string) => void;
 type ErrorHandler = (message: string) => void;
 
 let active = false;
-let generation = 0; // invalidates stale capture loops
+let generation = 0;
 let recordingRef: Audio.Recording | null = null;
 let finishResolve: ((text: string | null) => void) | null = null;
-let pendingCapture: Promise<void> | null = null; // in-flight _capture, awaited on stop
+let pendingCapture: Promise<void> | null = null;
 let onUtterance: UtteranceHandler | null = null;
 let onError: ErrorHandler | null = null;
 
@@ -42,7 +34,6 @@ export function isListeningConfigured(): boolean {
 
 /**
  * Registers the utterance handler. Called once when the assistant starts.
- * Resolves true (always — no native module or key required).
  */
 export async function initAlwaysListening(
   utterance: UtteranceHandler,
@@ -64,8 +55,6 @@ export async function stopListening(): Promise<void> {
   generation += 1;
   active = false;
   await stopCurrentRecording();
-  // Wait for the in-flight capture to fully release the native recorder, so a
-  // later startListening / capture never races with an unloaded one.
   const p = pendingCapture;
   pendingCapture = null;
   if (p) await p;
@@ -76,7 +65,7 @@ export function releaseAlwaysListening(): void {
   onError = null;
 }
 
-// ─── Capture loop ───────────────────────────────────────────────────
+// ─── Capture loop ───────────────────────────────────────────────
 
 async function runLoop(gen: number): Promise<void> {
   while (active && gen === generation) {
@@ -89,6 +78,8 @@ async function runLoop(gen: number): Promise<void> {
         // listener errors are ignored
       }
     }
+    // Brief pause between windows to release the mic
+    await sleep(PAUSE_MS);
   }
 }
 
@@ -111,7 +102,7 @@ async function stopCurrentRecording(): Promise<void> {
   finishCapture(null);
 }
 
-/** Records one utterance (speech + trailing silence) and transcribes it. */
+/** Records one fixed-duration window and transcribes it. */
 async function captureUtterance(gen: number): Promise<string | null> {
   if (finishResolve) return null;
   return await new Promise<string | null>((resolve) => {
@@ -130,26 +121,14 @@ async function _capture(
     shouldDuckAndroid: true,
   });
 
-  // VAD state is initialized BEFORE the recorder starts: expo-av fires the
-  // status callback synchronously inside createAsync (prepare + start), so
-  // variables declared afterwards would be in the temporal dead zone.
-  const startedAt = Date.now();
-  let started = false;
-  let spokenMs = 0;
-  let silentMs = 0;
-  let idleMs = 0;
-  let lastLevel: number | null = null;
-
   let recording: Audio.Recording;
   try {
     const options: Audio.RecordingOptions = {
       ...VOICE_RECORDING_OPTIONS,
-      isMeteringEnabled: true,
+      isMeteringEnabled: false,
     };
-    recording = await createRecordingWithRetry(options, onStatus, 250);
+    recording = await createRecordingWithRetry(options, undefined, 0);
     if (gen !== generation || !active) {
-      // A stop happened while the recorder was being prepared — release it
-      // right away so a later start/capture can record again.
       await recording.stopAndUnloadAsync().catch(() => {});
       finishCapture(null);
       return;
@@ -161,65 +140,46 @@ async function _capture(
     return;
   }
 
-  async function onStatus(status: Audio.RecordingStatus) {
-    if (!active || gen !== generation) {
-      finishCapture(null);
-      return;
-    }
-    if (!status.isRecording) {
-      // Status emitted right after prepareToRecordAsync (before startAsync) is
-      // not a real stop — ignore it so the capture isn't finished prematurely
-      // while the recorder is still alive.
-      if (started) finishCapture(null);
-      return;
-    }
-    started = true;
-
-    const level = typeof status.metering === "number" ? status.metering : lastLevel;
-    lastLevel = level;
-
-    const elapsed = Date.now() - startedAt;
-    const isSpeech = level !== null ? level > SPEECH_THRESHOLD_DB : elapsed < MIN_SPOKEN_MS;
-
-    if (isSpeech) {
-      spokenMs = elapsed;
-      silentMs = 0;
-      idleMs = 0;
-    } else if (spokenMs >= MIN_SPOKEN_MS) {
-      silentMs += 250;
-    } else {
-      idleMs += 250;
-    }
-
-    // Long silence with no speech yet → drop this capture, listen again.
-    if (idleMs >= IDLE_RESET_MS) {
-      await recording.stopAndUnloadAsync().catch(() => {});
-      finishCapture(null);
-      return;
-    }
-
-    const shouldStop =
-      elapsed >= MAX_UTTERANCE_MS ||
-      (silentMs >= SILENCE_TO_STOP_MS && spokenMs >= MIN_SPOKEN_MS);
-
-    if (!shouldStop) return;
-
-    await recording.stopAndUnloadAsync().catch(() => {});
-    const uri = recording.getURI();
-    if (!uri) {
-      finishCapture(null);
-      return;
-    }
-
-    let text: string | null = null;
-    try {
-      const result = await transcribeAudio(uri, (msg) => onError?.(msg));
-      text = result?.text ?? null;
-    } catch (err) {
-      onError?.(`Falha ao transcrever: ${(err as Error).message}`);
-    }
-
-    const clean = text?.trim() ?? "";
-    finishCapture(clean.length >= MIN_TEXT_LEN ? clean : null);
+  // Wait the fixed recording duration, checking for stop signal
+  const endAt = Date.now() + RECORD_MS;
+  while (Date.now() < endAt && active && gen === generation) {
+    await sleep(250);
   }
+
+  // Stop recording
+  if (!active || gen !== generation) {
+    await recording.stopAndUnloadAsync().catch(() => {});
+    finishCapture(null);
+    return;
+  }
+
+  try {
+    await recording.stopAndUnloadAsync();
+  } catch {
+    finishCapture(null);
+    return;
+  }
+
+  const uri = recording.getURI();
+  recordingRef = null;
+  if (!uri) {
+    finishCapture(null);
+    return;
+  }
+
+  // Transcribe
+  let text: string | null = null;
+  try {
+    const result = await transcribeAudio(uri, (msg) => onError?.(msg));
+    text = result?.text ?? null;
+  } catch (err) {
+    onError?.(`Falha ao transcrever: ${(err as Error).message}`);
+  }
+
+  const clean = text?.trim() ?? "";
+  finishCapture(clean.length >= MIN_TEXT_LEN ? clean : null);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }

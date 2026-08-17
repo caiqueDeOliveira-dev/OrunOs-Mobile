@@ -14,8 +14,8 @@ import {
   speak,
   stopSpeaking,
 } from "../../src/services/voiceService";
-import { sendVoiceMessage } from "../../src/services/chatService";
 import { getAssistantSnapshot, stopAssistant } from "../../src/services/voiceAssistant";
+import { executeVoiceCommand } from "../../src/services/commandRouter";
 import { NeonBackground } from "../../src/components/ui";
 
 type VoiceState = "idle" | "recording" | "processing" | "transcribing" | "speaking" | "error";
@@ -118,11 +118,11 @@ export default function VoiceScreen() {
         setState("processing");
 
         try {
-          const { reply } = await sendVoiceMessage("hampton", result.text);
+          const { reply } = await executeVoiceCommand(result.text);
           if (!mountedRef.current) return;
           setTtsText(reply);
           setState("speaking");
-          await speak(reply, { language: "pt-BR" });
+          await speak(reply);
           setState("idle");
         } catch {
           if (!mountedRef.current) return;
