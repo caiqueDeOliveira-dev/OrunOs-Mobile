@@ -20,6 +20,7 @@ import {
 } from "./alwaysListeningService";
 import { setupSpotifyVoiceCommands } from "./spotifyController";
 import { initWhatsAppAssistant } from "./whatsappAssistant";
+import { setupYouTubeVoiceCommands } from "./youtubeController";
 
 export type AssistantState =
   | "off"          // disabled
@@ -105,6 +106,7 @@ function ensureIntegrations() {
   integrationsReady = true;
   setupSpotifyVoiceCommands();
   initWhatsAppAssistant();
+  setupYouTubeVoiceCommands();
 }
 
 export function getAssistantSnapshot(): AssistantSnapshot {
@@ -196,6 +198,14 @@ export async function announceExternally(text: string): Promise<boolean> {
     }
   }
   return true;
+}
+
+/**
+ * Speaks text directly (TTS). Used for reading messages aloud.
+ * Unlike announceExternally, this always speaks regardless of state.
+ */
+export async function speakText(text: string): Promise<void> {
+  await speak(text, { language: "pt-BR", rate: 1.0 });
 }
 
 /** Manual wake — the floating mic button. Works with or without wake word. */

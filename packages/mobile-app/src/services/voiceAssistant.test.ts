@@ -35,6 +35,10 @@ vi.mock("./whatsappAssistant", () => ({
   initWhatsAppAssistant: vi.fn(),
 }));
 
+vi.mock("./youtubeController", () => ({
+  setupYouTubeVoiceCommands: vi.fn(),
+}));
+
 const { extractOrunCommand } = await import("./voiceAssistant");
 
 describe("extractOrunCommand", () => {

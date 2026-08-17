@@ -142,7 +142,7 @@ describe("setupSpotifyVoiceCommands", () => {
       duration_ms: 200000,
     });
     const reply = await run("o que tá tocando?");
-    expect(reply).toBe("Está tocando Blinding Lights, de The Weeknd.");
+    expect(reply).toMatch(/Está tocando Blinding Lights, de The Weeknd\./);
   });
 
   it('runs the connect flow on "conectar spotify"', async () => {

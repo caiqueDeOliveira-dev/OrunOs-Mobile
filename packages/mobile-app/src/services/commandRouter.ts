@@ -16,6 +16,7 @@ import { reminderHandler } from "./reminderController";
 import { phoneHandler } from "./phoneController";
 import { systemInfoHandler } from "./systemController";
 import { settingsHandler } from "./settingsController";
+import { setupYouTubeVoiceCommands } from "./youtubeController";
 
 export interface VoiceCommandHandler {
   /** Returns a spoken reply, or null if this handler doesn't own the command. */

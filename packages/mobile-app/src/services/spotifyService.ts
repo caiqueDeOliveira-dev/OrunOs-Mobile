@@ -278,3 +278,28 @@ export async function playTrackByName(query: string): Promise<{ name: string; ar
   await api("PUT", "/me/player/play", { uris: [track.uri] });
   return { name: track.name, artists: track.artists.map((a) => a.name).join(", ") };
 }
+
+export async function searchPlaylist(query: string): Promise<{ name: string; uri: string; id: string } | null> {
+  const search = await api<{ playlists: { items: Array<{ name: string; uri: string; id: string }> } }>(
+    "GET",
+    `/search?type=playlist&limit=3&q=${encodeURIComponent(query)}`
+  );
+  return search?.playlists?.items?.[0] ?? null;
+}
+
+export async function playPlaylist(playlistUri: string): Promise<void> {
+  await api("PUT", "/me/player/play", { context_uri: playlistUri });
+}
+
+export async function setVolume(percent: number): Promise<void> {
+  await api("PUT", `/me/player/volume?volume=${Math.min(100, Math.max(0, percent))}`);
+}
+
+export async function getDevices(): Promise<SpotifyDevice[]> {
+  const data = await api<{ devices: SpotifyDevice[] }>("GET", "/me/player/devices");
+  return data?.devices ?? [];
+}
+
+export async function transferDevice(deviceId: string): Promise<void> {
+  await api("PUT", "/me/player", { device_ids: [deviceId] });
+}
