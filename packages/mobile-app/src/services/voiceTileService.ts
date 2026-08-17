@@ -1,36 +1,39 @@
 // Orun OS — Quick Settings Tile bridge (JS side)
 //
-// Communicates with the native Android Quick Settings Tile via broadcasts.
-// The tile sends ACTION_TOGGLE when tapped, and the app sends
-// ACTION_STATUS_UPDATE back to keep the tile in sync.
+// Communicates with the native Android Quick Settings Tile via the
+// VoiceTile Expo module. When the user taps the tile, the native side
+// emits "onTileToggle" with { isActive }. We forward this to the
+// voice assistant to start/stop listening.
 
-import { Platform, DeviceEventEmitter } from "react-native";
+import { Platform } from "react-native";
+import * as DeviceEventEmitter from "expo-modules-core";
 
-const ACTION_TOGGLE = "com.orun.os.ACTION_TOGGLE_VOICE";
-const ACTION_STATUS_UPDATE = "com.orun.os.ACTION_VOICE_STATUS";
-const EXTRA_IS_ACTIVE = "is_active";
+type TileToggleEvent = { isActive: boolean };
+
+let NativeVoiceTile: any = null;
+try {
+  NativeVoiceTile = require("../../modules/voice-tile").default;
+} catch {
+  // Module not linked (dev / non-Android)
+}
 
 let subscription: any = null;
-let onToggleCallback: (() => void) | null = null;
+let onToggleCallback: ((active: boolean) => void) | null = null;
 
-/**
- * Check if the tile is available (Android only, after prebuild).
- */
 export function isTileAvailable(): boolean {
-  return Platform.OS === "android";
+  return Platform.OS === "android" && NativeVoiceTile != null;
 }
 
 /**
- * Listen for tile toggle broadcasts. Returns a cleanup function.
+ * Listen for tile toggle events. Calls `callback(isActive)` when the
+ * tile is tapped. Returns a cleanup function.
  */
-export function onTileToggle(callback: () => void): () => void {
+export function onTileToggle(callback: (active: boolean) => void): () => void {
   onToggleCallback = callback;
 
-  // Listen for native broadcast via DeviceEventEmitter
-  // The native side needs to emit this event
-  if (Platform.OS === "android") {
-    subscription = DeviceEventEmitter.addListener(ACTION_TOGGLE, () => {
-      onToggleCallback?.();
+  if (NativeVoiceTile) {
+    subscription = NativeVoiceTile.addListener("onTileToggle", (event: TileToggleEvent) => {
+      onToggleCallback?.(event.isActive);
     });
   }
 
@@ -42,10 +45,17 @@ export function onTileToggle(callback: () => void): () => void {
 }
 
 /**
- * Send status update to the tile so it stays in sync.
- * Native side should listen for this and update the tile state.
+ * Push current assistant state to the tile so its icon stays in sync.
  */
-export function setTileActive(active: boolean): void {
-  // This would need a native module to send the broadcast
-  // For now, we rely on the tile's own state management
+export async function setTileActive(active: boolean): Promise<void> {
+  if (NativeVoiceTile) {
+    await NativeVoiceTile.setTileActive(active);
+  }
+}
+
+export async function getTileActive(): Promise<boolean> {
+  if (NativeVoiceTile) {
+    return await NativeVoiceTile.isTileActive();
+  }
+  return false;
 }

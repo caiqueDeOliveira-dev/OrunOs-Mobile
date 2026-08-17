@@ -17,9 +17,9 @@ import { Audio } from "expo-av";
 import { transcribeAudio, createRecordingWithRetry, VOICE_RECORDING_OPTIONS } from "./voiceService";
 
 // ─── VAD tuning ─────────────────────────────────────────────────────
-const SPEECH_THRESHOLD_DB = -42;
-const SILENCE_TO_STOP_MS = 1_000; // silence after speech → end utterance
-const MIN_SPOKEN_MS = 500; // ignore clicks/coughs
+const SPEECH_THRESHOLD_DB = -50;
+const SILENCE_TO_STOP_MS = 1_200;
+const MIN_SPOKEN_MS = 400;
 const MAX_UTTERANCE_MS = 15_000; // hard cap per utterance
 const IDLE_RESET_MS = 8_000; // long silence → drop capture (no speech yet)
 const MIN_TEXT_LEN = 2;

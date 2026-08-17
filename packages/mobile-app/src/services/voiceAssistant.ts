@@ -28,6 +28,7 @@ import {
   setNotificationActions,
   setupNotificationResponseHandler,
 } from "./voiceNotification";
+import { onTileToggle, setTileActive, isTileAvailable } from "./voiceTileService";
 import { loadVoiceSettings } from "./voiceSettingsStore";
 
 export type AssistantState =
@@ -147,6 +148,10 @@ function setState(next: AssistantState) {
   } else if (next === "off") {
     hideVoiceNotification();
   }
+  // Sync Quick Settings Tile icon
+  if (isTileAvailable()) {
+    setTileActive(next === "listening" || next === "speaking");
+  }
 }
 
 // ─── Public API ─────────────────────────────────────────────────────
@@ -166,6 +171,14 @@ export async function startAssistant(): Promise<void> {
     onResume: () => resumeAssistant(),
     onStop: () => stopAssistant(),
   });
+
+  // Sync Quick Settings Tile
+  if (isTileAvailable()) {
+    onTileToggle((active) => {
+      if (active && state === "off") startAssistant();
+      else if (!active && state !== "off") stopAssistant();
+    });
+  }
 
   const mic = await Audio.requestPermissionsAsync();
   if (!mic.granted) {
@@ -232,7 +245,7 @@ export async function announceExternally(text: string): Promise<boolean> {
   }
 
   setState("speaking");
-  await speak(text, { language: "pt-BR", rate: 1.0 });
+  await speak(text);
 
   if (state === "speaking") {
     if (wakeAvailable) {
@@ -250,7 +263,7 @@ export async function announceExternally(text: string): Promise<boolean> {
  * Unlike announceExternally, this always speaks regardless of state.
  */
 export async function speakText(text: string): Promise<void> {
-  await speak(text, { language: "pt-BR", rate: 1.0 });
+  await speak(text);
 }
 
 /** Manual wake — the floating mic button. Works with or without wake word. */
@@ -296,7 +309,7 @@ async function _handleUtterance(text: string) {
   }
 
   setState("speaking");
-  await speak(result.reply, { language: "pt-BR", rate: 1.0 });
+  await speak(result.reply);
   if (mySession !== session) return;
 
   await _resumeListening();
@@ -311,7 +324,7 @@ async function _greetAndCapture(mySession: number) {
   error = null;
 
   setState("greeting");
-  await speak(GREETING, { language: "pt-BR", rate: 1.0 });
+  await speak(GREETING);
   if (mySession !== session) return;
 
   // ─── Conversational loop ──────────────────────────────────────────
@@ -330,7 +343,7 @@ async function _greetAndCapture(mySession: number) {
 
       if (isEndCommand(text)) {
         setState("speaking");
-        await speak(FAREWELL, { language: "pt-BR", rate: 1.0 });
+        await speak(FAREWELL);
         if (mySession !== session) return;
         break;
       }
@@ -346,7 +359,7 @@ async function _greetAndCapture(mySession: number) {
       if (result.reply === "OK, interrompendo.") break;
 
       setState("speaking");
-      await speak(result.reply, { language: "pt-BR", rate: 1.0 });
+      await speak(result.reply);
       if (mySession !== session) return;
 
       // Loop back → capture next command
