@@ -18,6 +18,15 @@ import {
   connectSpotify,
   disconnectSpotify,
 } from "../../src/services/spotifyService";
+import {
+  getPresets,
+  getPresetKeys,
+  loadVoiceSettings,
+  saveVoiceSettings,
+  setVoicePreset,
+  type VoiceSettings,
+} from "../../src/services/voiceSettingsStore";
+import { speak } from "../../src/services/voiceService";
 
 const THEMES: { name: ThemeName; label: string }[] = [
   { name: "neon", label: "Neon" },
@@ -48,6 +57,8 @@ export default function SettingsScreen() {
   const [currentLang, setCurrentLang] = useState<Locale>(getLocale());
   const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [spotifyBusy, setSpotifyBusy] = useState(false);
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string>("wolf");
 
   const refreshSpotify = useCallback(async () => {
     const connected = await isSpotifyConnected().catch(() => false);
@@ -57,6 +68,18 @@ export default function SettingsScreen() {
   useEffect(() => {
     refreshSpotify();
   }, [refreshSpotify]);
+
+  useEffect(() => {
+    loadVoiceSettings().then((s) => {
+      setVoiceSettings(s);
+      // Find matching preset
+      const presets = getPresets();
+      const match = Object.entries(presets).find(
+        ([, v]) => v.pitch === s.pitch && v.rate === s.rate
+      );
+      setSelectedPreset(match?.[0] ?? "wolf");
+    });
+  }, []);
 
   async function handleSpotifyConnect() {
     if (spotifyBusy) return;
@@ -79,6 +102,22 @@ export default function SettingsScreen() {
   async function handleSpotifyDisconnect() {
     await disconnectSpotify();
     await refreshSpotify();
+  }
+
+  async function handleVoicePreset(key: string) {
+    Haptics.selectionAsync();
+    try {
+      const settings = await setVoicePreset(key);
+      setVoiceSettings(settings);
+      setSelectedPreset(key);
+    } catch (err) {
+      Alert.alert("Erro", (err as Error).message);
+    }
+  }
+
+  async function handleTestVoice() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await speak("Olá, eu sou o Orun. Voz do lobisomem ativa.", { language: "pt-BR" });
   }
 
   useEffect(() => {
@@ -287,6 +326,55 @@ export default function SettingsScreen() {
           <Text style={[styles.version, { color: colors.textMuted }]}>
             Exemplos: "Orun, abre o spotify", "pula a música", "toca lofi para estudar".
           </Text>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>
+          <View style={styles.row}>
+            <View style={styles.rowInline}>
+              <Ionicons name="volume-high" size={16} color={colors.accent} />
+              <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Voz do Orun</Text>
+            </View>
+            <Pressable onPress={handleTestVoice} hitSlop={8}>
+              <Ionicons name="play-circle" size={22} color={colors.accent} />
+            </Pressable>
+          </View>
+
+          <View style={styles.themeGrid}>
+            {getPresetKeys().map((key) => {
+              const preset = getPresets()[key];
+              const isSelected = selectedPreset === key;
+              return (
+                <Pressable
+                  key={key}
+                  style={[
+                    styles.themeOption,
+                    {
+                      backgroundColor: isSelected ? colors.accent : "rgba(10,4,20,0.6)",
+                      borderColor: isSelected ? colors.accent : NEON.glow.red + "40",
+                    },
+                  ]}
+                  onPress={() => handleVoicePreset(key)}
+                >
+                  <Text
+                    style={[
+                      styles.themeLabel,
+                      { color: isSelected ? colors.textInverted : colors.textPrimary },
+                    ]}
+                  >
+                    {preset.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {voiceSettings && (
+            <View style={{ gap: SPACING.xs }}>
+              <Text style={[styles.version, { color: colors.textMuted }]}>
+                Pitch: {voiceSettings.pitch.toFixed(2)} · Velocidade: {voiceSettings.rate.toFixed(2)}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={[styles.section, { backgroundColor: "rgba(15,7,24,0.55)", borderColor: NEON.glow.red + "30" }]}>

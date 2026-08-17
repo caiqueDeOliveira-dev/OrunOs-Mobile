@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import * as FileSystem from "expo-file-system";
 import { supabase } from "./supabaseClient";
 import { trackVoiceRecorded } from "./analyticsService";
+import { getCachedVoiceSettings, loadVoiceSettings, type VoiceSettings } from "./voiceSettingsStore";
 
 export interface TranscriptResult {
   text: string;
@@ -173,15 +174,20 @@ let ttsPlaying = false;
 export async function speak(text: string, options: TTSOptions = {}): Promise<void> {
   if (ttsPlaying) await stopSpeaking();
 
+  // Ensure voice settings are loaded
+  const settings = getCachedVoiceSettings();
+  if (!settings) await loadVoiceSettings();
+  const vs = getCachedVoiceSettings();
+
   ttsPlaying = true;
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
   return new Promise((resolve) => {
     Speech.speak(text, {
       language: options.language ?? "pt-BR",
-      rate: options.rate ?? 1.0,
-      pitch: options.pitch ?? 1.0,
-      voice: options.voice,
+      rate: options.rate ?? vs.rate,
+      pitch: options.pitch ?? vs.pitch,
+      voice: options.voice || vs.voice || undefined,
       onDone: () => {
         ttsPlaying = false;
         resolve();

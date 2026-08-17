@@ -21,6 +21,14 @@ import {
 import { setupSpotifyVoiceCommands } from "./spotifyController";
 import { initWhatsAppAssistant } from "./whatsappAssistant";
 import { setupYouTubeVoiceCommands } from "./youtubeController";
+import {
+  showVoiceNotification,
+  updateVoiceNotification,
+  hideVoiceNotification,
+  setNotificationActions,
+  setupNotificationResponseHandler,
+} from "./voiceNotification";
+import { loadVoiceSettings } from "./voiceSettingsStore";
 
 export type AssistantState =
   | "off"          // disabled
@@ -133,6 +141,12 @@ export function subscribeAssistant(listener: Listener): () => void {
 function setState(next: AssistantState) {
   state = next;
   emit();
+  // Update persistent notification based on state
+  if (next === "listening" || next === "speaking") {
+    updateVoiceNotification(next);
+  } else if (next === "off") {
+    hideVoiceNotification();
+  }
 }
 
 // ─── Public API ─────────────────────────────────────────────────────
@@ -141,6 +155,17 @@ export async function startAssistant(): Promise<void> {
   if (state !== "off") return;
   session += 1;
   ensureIntegrations();
+
+  // Load voice settings (wolf/masculine default)
+  await loadVoiceSettings();
+
+  // Setup notification actions
+  setupNotificationResponseHandler();
+  setNotificationActions({
+    onPause: () => pauseAssistant(),
+    onResume: () => resumeAssistant(),
+    onStop: () => stopAssistant(),
+  });
 
   const mic = await Audio.requestPermissionsAsync();
   if (!mic.granted) {
@@ -167,6 +192,26 @@ export async function stopAssistant(): Promise<void> {
   releaseAlwaysListening();
   wakeAvailable = false;
   setState("off");
+}
+
+let pausedState: AssistantState | null = null;
+
+export async function pauseAssistant(): Promise<void> {
+  if (state === "off") return;
+  pausedState = state;
+  await stopListening();
+  await stopSpeaking();
+  wakeAvailable = false;
+  setState("idle");
+  await updateVoiceNotification("paused");
+}
+
+export async function resumeAssistant(): Promise<void> {
+  if (state !== "idle") return;
+  await startListening();
+  wakeAvailable = true;
+  setState("listening");
+  pausedState = null;
 }
 
 /**

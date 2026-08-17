@@ -39,6 +39,19 @@ vi.mock("./youtubeController", () => ({
   setupYouTubeVoiceCommands: vi.fn(),
 }));
 
+vi.mock("./voiceNotification", () => ({
+  showVoiceNotification: vi.fn(async () => {}),
+  updateVoiceNotification: vi.fn(async () => {}),
+  hideVoiceNotification: vi.fn(async () => {}),
+  setNotificationActions: vi.fn(),
+  setupNotificationResponseHandler: vi.fn(),
+}));
+
+vi.mock("./voiceSettingsStore", () => ({
+  loadVoiceSettings: vi.fn(async () => ({ pitch: 0.75, rate: 0.95, voice: "", label: "Lobisomem" })),
+  getCachedVoiceSettings: vi.fn(() => ({ pitch: 0.75, rate: 0.95, voice: "", label: "Lobisomem" })),
+}));
+
 const { extractOrunCommand } = await import("./voiceAssistant");
 
 describe("extractOrunCommand", () => {
